@@ -503,26 +503,36 @@ const CAT_DEFS = [
 ];
 
 const DEFAULT_QUESTIONS = [
+  // ── 기본 인적사항 ──
+  { title:'학번', options:[], multi:false, optional:false },
   { title:'이름', options:[], multi:false, optional:false },
-  { title:'졸업 후 희망 진로나 목표를 적어주세요 (희망 직업, 희망 대학·학과 등)', options:[], multi:false, optional:false },
-  { title:'희망하는 대학 입시 전형이 있다면 무엇인가요?', options:['수시(학생부교과)','수시(학생부종합)','수시(논술)','정시(수능)','아직 모르겠다'], multi:false, optional:true },
   { title:'가족 구성원을 간단히 소개해주세요 (부모님, 형제자매 등)', options:[], multi:false, optional:false },
-  { title:'평소 취침 시간과 기상 시간은 어떻게 되나요?', options:[], multi:false, optional:false },
-  { title:'평소 식습관에 대해 알려주세요 (아침 식사 여부, 편식 등)', options:[], multi:false, optional:true },
-  { title:'등교 방법은 무엇인가요?', options:['도보','자전거','대중교통','자가용','기타'], multi:false, optional:true },
-  { title:'하루 평균 자기 공부 시간은 얼마나 되나요?', options:['1시간 미만','1~2시간','2~3시간','3~4시간','4시간 이상'], multi:false, optional:false },
+
+  // ── 진로 및 학업 ──
+  { title:'졸업 후 희망 진로나 목표를 적어주세요 (희망 직업, 희망 대학·학과 등)', options:[], multi:false, optional:false },
+  { title:'희망하는 대학 입시 전형이 있다면 무엇인가요?', options:['수시(학생부교과)','수시(학생부종합)','수시(논술)','정시(수능)','아직 모르겠다'], multi:false, optional:false },
   { title:'가장 자신 있는 과목과 어려운 과목은 무엇인가요?', options:[], multi:false, optional:false },
-  { title:'학원이나 과외를 받고 있다면 어떤 과목인지 알려주세요', options:[], multi:false, optional:true },
-  { title:'야간 자율학습(야자) 참여 여부를 알려주세요', options:['매일 참여','주 3~4일','주 1~2일','참여하지 않음'], multi:false, optional:true },
+  { title:'하루 평균 자기 공부 시간은 얼마나 되나요?', options:['1시간 미만','1~2시간','2~3시간','3~4시간','4시간 이상'], multi:false, optional:false },
+  { title:'학원이나 과외를 받고 있다면 어떤 과목인지 알려주세요', options:[], multi:false, optional:false },
+  { title:'야간 자율학습(야자) 참여 여부를 알려주세요', options:['매일 참여','주 3~4일','주 1~2일','참여하지 않음'], multi:false, optional:false },
+  { title:'학교에서 참여하고 있는 동아리나 활동이 있나요?', options:[], multi:false, optional:false },
+
+  // ── 생활 습관 ──
+  { title:'등교 방법은 무엇인가요?', options:['도보','자전거','대중교통','자가용','기타'], multi:false, optional:false },
+  { title:'평소 취침 시간과 기상 시간은 어떻게 되나요?', options:[], multi:false, optional:false },
+  { title:'평소 식습관에 대해 알려주세요 (아침 식사 여부, 편식 등)', options:[], multi:false, optional:false },
+  { title:'스마트폰 사용 시간은 하루 평균 어느 정도인가요?', options:['1시간 미만','1~2시간','2~4시간','4시간 이상'], multi:false, optional:false },
+  { title:'스트레스를 받을 때 주로 어떻게 해소하나요?', options:[], multi:false, optional:false },
+
+  // ── 성격 및 대인관계 ──
   { title:'본인의 성격을 간단히 표현해주세요 (장점, 단점 포함)', options:[], multi:false, optional:false },
-  { title:'MBTI를 알고 있다면 적어주세요', options:[], multi:false, optional:true },
-  { title:'좋아하는 취미나 활동이 있다면 알려주세요', options:[], multi:false, optional:true },
-  { title:'스트레스를 받을 때 주로 어떻게 해소하나요?', options:[], multi:false, optional:true },
-  { title:'스마트폰 사용 시간은 하루 평균 어느 정도인가요?', options:['1시간 미만','1~2시간','2~4시간','4시간 이상'], multi:false, optional:true },
-  { title:'학교에서 참여하고 있는 동아리나 활동이 있나요?', options:[], multi:false, optional:true },
+  { title:'MBTI를 알고 있다면 적어주세요', options:[], multi:false, optional:false },
+  { title:'좋아하는 취미나 활동이 있다면 알려주세요', options:[], multi:false, optional:false },
   { title:'친구 관계에서 본인은 어떤 편인가요?', options:[], multi:false, optional:false },
-  { title:'고등학교 생활에서 가장 기대되거나 해보고 싶은 것이 있나요?', options:[], multi:false, optional:true },
-  { title:'담임 선생님에게 하고 싶은 말이나 알려주고 싶은 것이 있다면 자유롭게 적어주세요', options:[], multi:false, optional:true },
+
+  // ── 기대 및 소통 ──
+  { title:'고등학교 생활에서 가장 기대되거나 해보고 싶은 것이 있나요?', options:[], multi:false, optional:false },
+  { title:'담임 선생님에게 하고 싶은 말이나 알려주고 싶은 것이 있다면 자유롭게 적어주세요', options:[], multi:false, optional:false },
 ];
 
 // ════════════════════════════════════════
