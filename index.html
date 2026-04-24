@@ -499,7 +499,7 @@ const PROVIDERS = {
     models: [
       { id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro',       tier:'paid',     desc:'최고 성능' },
       { id:'gemini-3-flash-preview',  label:'Gemini 3 Flash',        tier:'freemium', desc:'무료 한도 1,500회/일' },
-      { id:'gemini-3.1-flash-lite',   label:'Gemini 3.1 Flash Lite', tier:'freemium', desc:'무료 한도 1,500회/일' },
+      { id:'gemini-3.1-flash-lite-preview',   label:'Gemini 3.1 Flash Lite', tier:'freemium', desc:'무료 한도 1,500회/일' },
     ]
   }
 };
@@ -1047,7 +1047,7 @@ async function callOpenAI(prompt,model,key) {
   const r=await fetch('https://api.openai.com/v1/chat/completions',{
     method:'POST',
     headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
-    body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:1500})
+    body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:4000})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
   const d=await r.json(); return d.choices?.[0]?.message?.content?.trim()||'';
@@ -1058,7 +1058,7 @@ async function callClaude(prompt,model,key) {
   const r=await fetch('https://api.anthropic.com/v1/messages',{
     method:'POST',
     headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-    body:JSON.stringify({model,max_tokens:1500,messages:[{role:'user',content:prompt}]})
+    body:JSON.stringify({model,max_tokens:4000,messages:[{role:'user',content:prompt}]})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
   const d=await r.json(); return d.content?.[0]?.text?.trim()||'';
@@ -1069,7 +1069,7 @@ async function callGemini(prompt,model,key) {
   const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1500}})
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:4000}})
   });
   if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
   const d=await r.json(); return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'';
@@ -1118,6 +1118,8 @@ async function downloadExcel() {
 
   // 컬럼 번호 → 엑셀 알파벳 (1→A, 27→AA)
   function col(n){let s='';while(n>0){let r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}return s;}
+  // 텍스트 길이·컬럼 너비 기반 행 높이 계산
+  function rowH(text,colW,lh=16,min=20){if(!text)return min;const lines=Math.ceil(String(text).length/(colW*0.55));return Math.max(lines*lh,min);}
 
   // ── 헤더 수집 (이름 첫번째, 내부 키 제외) ──
   const hSet=new Set();
@@ -1225,7 +1227,7 @@ async function downloadExcel() {
         alignment:{vertical:'middle',wrapText:true},
         border:{bottom:{style:'hair',color:{argb:'FFE0E0E0'}}},
       });
-      ws1.getRow(r).height=22; r++;
+      ws1.getRow(r).height=40; r++;
     }
     ws1.getRow(r).height=6; r++;
   }
@@ -1252,12 +1254,19 @@ async function downloadExcel() {
   const sorted=[...allResponses].sort((a,b)=>(a.__submitTime__||'')<(b.__submitTime__||'')?-1:1);
   sorted.forEach((res,i)=>{
     const ts=res.__submitTime__?new Date(res.__submitTime__).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    const row=ws2.addRow([ts,...allHdr.map(h=>res[h]||'')]);
+    const rowVals=[ts,...allHdr.map(h=>res[h]||'')];
+    const row=ws2.addRow(rowVals);
     const bg=i%2===0?'FFFFFFFF':'FFF8FAFB';
-    row.height=20;
+    // 행 높이: 각 셀 내용 길이와 컬럼 너비로 필요한 줄 수를 추정해 자동 계산
+    const maxLines=rowVals.reduce((mx,v,ci)=>{
+      if(!v)return mx;
+      const colW=ci===0?20:Math.min(Math.max(fullHdr[ci].length*2.2,12),36);
+      return Math.max(mx,Math.ceil(String(v).length/(colW*0.55)));
+    },1);
+    row.height=Math.max(maxLines*16,20);
     row.eachCell(cell=>{
       cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:bg}};
-      cell.alignment={vertical:'middle',wrapText:false};
+      cell.alignment={vertical:'middle',wrapText:true};
       cell.border={bottom:{style:'hair',color:{argb:'FFE0E0E0'}},right:{style:'hair',color:{argb:'FFE0E0E0'}}};
     });
   });
