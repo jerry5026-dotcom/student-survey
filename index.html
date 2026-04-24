@@ -251,11 +251,13 @@
           <div class="card-title" style="margin:0">📝 기초조사 질문 목록</div>
           <div style="display:flex;gap:8px;flex-wrap:wrap">
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 질문 추가</button>
-            <button class="btn btn-outline btn-sm" onclick="resetToDefaults()">기본값으로 초기화</button>
+            <button class="btn btn-outline btn-sm" onclick="saveAsMyDefault()" title="현재 질문 목록을 나만의 기본값으로 저장">⭐ 내 기본값으로 저장</button>
+            <button class="btn btn-outline btn-sm" onclick="resetToDefaults()">🔄 기본값으로 초기화</button>
           </div>
         </div>
         <div class="info-box" style="margin-top:16px">
-          질문을 수정한 뒤 <b>폼 생성 탭</b>에서 구글 폼을 만들면 학생들이 응답할 수 있습니다.
+          질문을 수정한 뒤 <b>폼 생성 탭</b>에서 구글 폼을 만들면 학생들이 응답할 수 있습니다.<br>
+          <span id="default-source-label" style="font-size:12px;opacity:.8"></span>
         </div>
         <div style="overflow-x:auto">
           <table class="questions-table">
@@ -657,7 +659,7 @@ function showApp(email) {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').style.display='flex';
   document.getElementById('user-email').textContent=email;
-  renderQuestions(); updateFormPanel(); renderSettingsTab(); updateAIPanel();
+  renderQuestions(); updateFormPanel(); renderSettingsTab(); updateAIPanel(); updateDefaultSourceLabel();
 }
 function switchTab(id,btn) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
@@ -709,7 +711,34 @@ function openEditModal(i){editingIdx=i;const q=questions[i];document.getElementB
 function saveQuestion(){const title=document.getElementById('q-title').value.trim();if(!title){toast('질문 내용을 입력해주세요.','error');return;}const options=document.getElementById('q-options').value.split('\n').map(s=>s.trim()).filter(Boolean);const multi=document.getElementById('q-multi').checked;const optional=document.getElementById('q-optional').checked;const q={title,options,multi,optional};if(editingIdx===-1)questions.push(q);else questions[editingIdx]=q;saveQs();renderQuestions();closeModal();toast(editingIdx===-1?'질문이 추가되었습니다.':'질문이 수정되었습니다.','success');}
 function deleteQ(i){if(!confirm(`"${questions[i].title}" 질문을 삭제하시겠습니까?`))return;questions.splice(i,1);saveQs();renderQuestions();toast('삭제되었습니다.');}
 function moveQ(i,dir){const j=i+dir;if(j<0||j>=questions.length)return;[questions[i],questions[j]]=[questions[j],questions[i]];saveQs();renderQuestions();}
-function resetToDefaults(){if(!confirm('질문 목록을 기본값으로 초기화하시겠습니까?'))return;questions=JSON.parse(JSON.stringify(DEFAULT_QUESTIONS));saveQs();renderQuestions();toast('기본값으로 초기화되었습니다.','success');}
+function resetToDefaults(){
+  const myDefault=localStorage.getItem('my_default_questions');
+  const label=myDefault?'내 기본값':'공장 기본값';
+  if(!confirm(`질문 목록을 "${label}"으로 초기화하시겠습니까?`))return;
+  questions=JSON.parse(myDefault||JSON.stringify(DEFAULT_QUESTIONS));
+  saveQs(); renderQuestions(); updateDefaultSourceLabel();
+  toast(`✅ "${label}"으로 초기화되었습니다.`,'success');
+}
+function saveAsMyDefault(){
+  if(!questions.length){toast('저장할 질문이 없습니다.','error');return;}
+  if(!confirm(`현재 질문 ${questions.length}개를 내 기본값으로 저장하시겠습니까?\n(앞으로 "기본값으로 초기화" 시 이 질문 목록이 사용됩니다)`))return;
+  localStorage.setItem('my_default_questions',JSON.stringify(questions));
+  updateDefaultSourceLabel();
+  toast(`⭐ ${questions.length}개 질문이 내 기본값으로 저장되었습니다.`,'success');
+}
+function updateDefaultSourceLabel(){
+  const el=document.getElementById('default-source-label');
+  if(!el)return;
+  const myDefault=localStorage.getItem('my_default_questions');
+  if(myDefault){
+    const parsed=JSON.parse(myDefault);
+    el.textContent=`⭐ 현재 기본값: 내가 저장한 기본값 (${parsed.length}개 질문)`;
+    el.style.color='var(--orange)';
+  } else {
+    el.textContent='🔧 현재 기본값: 공장 초기값 (40개 질문) — ⭐ 내 기본값으로 저장 버튼으로 직접 지정할 수 있습니다.';
+    el.style.color='';
+  }
+}
 
 // ════════════════════════════════════════
 //  FORM CREATION
