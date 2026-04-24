@@ -517,61 +517,45 @@ const CAT_DEFS = [
 ];
 
 const DEFAULT_QUESTIONS = [
-  // ── 기본 인적사항 ──
   { title:'학번', options:[], multi:false, optional:false },
   { title:'이름', options:[], multi:false, optional:false },
   { title:'본인 연락처', options:[], multi:false, optional:false },
-
-  // ── 성격 및 자기소개 ──
   { title:'나의 MBTI는?', options:[], multi:false, optional:false },
   { title:'내가 좋아하는 것', options:[], multi:false, optional:false },
   { title:'내가 싫어하는 것', options:[], multi:false, optional:false },
   { title:'나의 장점', options:[], multi:false, optional:false },
   { title:'나의 단점', options:[], multi:false, optional:false },
   { title:'스트레스 해소 방법', options:[], multi:false, optional:false },
-  { title:'건강 상태 (평소 건강 상태 및 특이사항)', options:[], multi:false, optional:false },
-
-  // ── 가족관계 ──
+  { title:'건강 상태', options:[], multi:false, optional:false },
   { title:'현재 함께 살고 있는 가족', options:[], multi:false, optional:false },
   { title:'가족 중 가장 가깝고 친밀한 구성원', options:[], multi:false, optional:false },
   { title:'주 보호자 성명', options:[], multi:false, optional:false },
-  { title:'주 보호자와의 관계', options:[], multi:false, optional:false },
+  { title:'주 보호자와 본인 간의 관계', options:[], multi:false, optional:false },
   { title:'주 보호자 연락처', options:[], multi:false, optional:false },
   { title:'가족관계 해당사항', options:['해당사항 없음','한부모 가정','다자녀','다문화 가정','기초생활수급자','차상위계층','국가유공자 자녀','공무원 자녀','장애인','모름','기타'], multi:true, optional:false },
-
-  // ── 생활 습관 ──
   { title:'나의 식습관', options:['세 끼 규칙적','두 끼','한 끼','불규칙'], multi:false, optional:false },
   { title:'취침 시간', options:['밤 12시 이전','12시~새벽 1시','새벽 1시 이후'], multi:false, optional:false },
   { title:'스마트폰/태블릿/PC 사용 시간', options:['거의 미사용','절제함','절제 어려움'], multi:false, optional:false },
-  { title:'등교 방법', options:['도보','버스','자전거','부모님 자가용'], multi:false, optional:false },
+  { title:'등교 방법', options:['도보','버스','자전거','부모님 자가용','기타'], multi:false, optional:false },
   { title:'등교 시간', options:['10분 이내','10~20분','20~30분','30분 이상'], multi:false, optional:false },
-
-  // ── 친구 및 학교생활 ──
   { title:'우리 반 친한 친구', options:[], multi:false, optional:false },
   { title:'다른 반 친한 친구', options:[], multi:false, optional:false },
-  { title:'1,2학년 중 어려웠던 부분', options:[], multi:false, optional:false },
+  { title:'1,2학년 때 생활 중 어려웠던 부분', options:[], multi:false, optional:false },
   { title:'올해 반 친구들과 해보고 싶은 것', options:[], multi:false, optional:false },
-  { title:'1,2학년 임원 경력', options:[], multi:false, optional:false },
-  { title:'반장 추천 인물과 이유', options:[], multi:false, optional:false },
+  { title:'1,2학년 때 임원 경력', options:[], multi:false, optional:false },
   { title:'학급 내 희망 역할', options:[], multi:false, optional:false },
-
-  // ── 학업 ──
   { title:'좋아하는 과목과 이유', options:[], multi:false, optional:false },
   { title:'취약 과목과 이유', options:[], multi:false, optional:false },
-  { title:'일과 후 학습 방법', options:['학원/과외','독서실','가정학습','야자(야간 자율학습)'], multi:true, optional:false },
+  { title:'일과 후 학습 방법', options:['학원/과외','독서실','가정학습','야자(야간 자율학습)'], multi:false, optional:false },
   { title:'올해 내신 목표 등급', options:[], multi:false, optional:false },
   { title:'올해 모의고사 목표 등급', options:[], multi:false, optional:false },
-
-  // ── 진로 ──
   { title:'희망 진로', options:[], multi:false, optional:false },
   { title:'진로 결정 계기', options:[], multi:false, optional:false },
   { title:'대학 입시 정보 수준', options:['잘 모름','기초적으로 알고 있음','어느 정도 알고 있음','심화적으로 알고 있음'], multi:false, optional:false },
   { title:'희망하는 전형', options:['수시(학생부교과)','수시(학생부종합)','수시(논술)','정시(수능)','예체능','아직 고민 중'], multi:false, optional:false },
   { title:'학생부 종합 전형 준비 여부', options:['전혀 모름','알고 있지만 준비 안 함','조금 준비함','적극적으로 준비함','해당 없음(정시 위주)'], multi:false, optional:false },
   { title:'희망 대학 또는 학과', options:[], multi:false, optional:false },
-
-  // ── 기타 ──
-  { title:'기타 사항 (가정·경제 상담 요청 등 담임교사에게 알리고 싶은 내용)', options:[], multi:false, optional:true },
+  { title:'기타 사항', options:[], multi:false, optional:true },
 ];
 
 // ════════════════════════════════════════
