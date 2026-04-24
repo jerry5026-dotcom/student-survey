@@ -675,7 +675,7 @@ async function handleCreateForm() {
     const form=await apiFetch('https://forms.googleapis.com/v1/forms','POST',{info:{title:'학생 기초조사',documentTitle:'학생 기초조사'}});
     const fId=form.formId;
     const requests=[{updateFormInfo:{info:{description:FORM_DESC},updateMask:'description'}}];
-    questions.forEach(q=>{let content;if(q.options&&q.options.length){content={choiceQuestion:{type:q.multi?'CHECKBOX':'RADIO',options:q.options.map(v=>({value:v})),shuffle:false}};}else{content={textQuestion:{paragraph:true}};}requests.push({createItem:{item:{title:q.title,questionItem:{question:{required:!q.optional,...content}}}}});});
+    questions.forEach((q,i)=>{let content;if(q.options&&q.options.length){content={choiceQuestion:{type:q.multi?'CHECKBOX':'RADIO',options:q.options.map(v=>({value:v})),shuffle:false}};}else{content={textQuestion:{paragraph:true}};}requests.push({createItem:{item:{title:q.title,questionItem:{question:{required:!q.optional,...content}}},location:{index:i}}});});
     await apiFetch(`https://forms.googleapis.com/v1/forms/${fId}:batchUpdate`,'POST',{requests});
     formId=fId; formStudentUrl=`https://docs.google.com/forms/d/${fId}/viewform`; formEditUrl=`https://docs.google.com/forms/d/${fId}/edit`;
     localStorage.setItem('formId',formId); localStorage.setItem('formStudentUrl',formStudentUrl); localStorage.setItem('formEditUrl',formEditUrl);
