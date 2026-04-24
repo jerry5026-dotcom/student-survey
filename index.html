@@ -28,6 +28,8 @@
     .setup-info { margin-top:20px; border:1px solid var(--gray-200); border-radius:var(--radius); overflow:hidden; }
     .setup-toggle { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:var(--gray-50); cursor:pointer; font-size:13px; font-weight:500; color:var(--gray-600); border:none; width:100%; text-align:left; }
     .setup-toggle:hover { background:var(--gray-100); }
+    .setup-toggle-primary { background:var(--blue-light); color:var(--blue); font-weight:600; }
+    .setup-toggle-primary:hover { background:#d7e5fb; }
     .setup-body { padding:16px; display:none; font-size:13px; color:var(--gray-600); line-height:1.8; }
     .setup-body.open { display:block; }
     .setup-body ol { padding-left:20px; }
@@ -248,12 +250,45 @@
     </button>
     <p style="text-align:center;font-size:12px;color:var(--gray-400);margin-top:12px">AI 모델 및 API 키는 로그인 후 ⚙️ AI 설정 탭에서 구성합니다</p>
 
+    <!-- 일반 사용자 안내 (기본 펼침) -->
     <div class="setup-info">
-      <button class="setup-toggle" onclick="toggleSetup()">
-        ⚙️ Google Cloud 최초 설정 안내
-        <span id="setup-arrow">▼</span>
+      <button class="setup-toggle setup-toggle-primary" onclick="toggleSetup('user')">
+        👨‍🏫 처음 사용하시나요? — 사용 요청 안내
+        <span id="setup-arrow-user">▲</span>
       </button>
-      <div class="setup-body" id="setup-body">
+      <div class="setup-body open" id="setup-body-user" style="padding:18px 18px 16px">
+        <div style="font-size:13px;line-height:1.8;color:var(--gray-800)">
+          이 앱은 현재 <b>테스트 단계</b>라 <b>승인된 선생님만</b> 로그인할 수 있습니다.<br>
+          사용을 원하시면 아래 이메일로 <b>사용 요청</b>을 보내주세요.
+        </div>
+        <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px 14px;margin-top:12px;text-align:center">
+          <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px">📩 사용 요청 이메일</div>
+          <div style="font-size:15px;font-weight:600;color:var(--blue)">
+            <a href="mailto:jerry5026@gmail.com?subject=%5B%ED%95%99%EC%83%9D%20%EA%B8%B0%EC%B4%88%EC%A1%B0%EC%82%AC%20%EB%8F%84%EC%9A%B0%EB%AF%B8%5D%20%EC%82%AC%EC%9A%A9%20%EC%9A%94%EC%B2%AD&amp;body=%EC%95%88%EB%85%95%ED%95%98%EC%84%B8%EC%9A%94%2C%0A%0A%ED%95%99%EC%83%9D%20%EA%B8%B0%EC%B4%88%EC%A1%B0%EC%82%AC%20%EB%8F%84%EC%9A%B0%EB%AF%B8%20%EC%82%AC%EC%9A%A9%EC%9D%84%20%EC%9A%94%EC%B2%AD%EB%93%9C%EB%A6%BD%EB%8B%88%EB%8B%A4.%0A%0A%E2%80%A2%20%EC%86%8C%EC%86%8D%20%ED%95%99%EA%B5%90%3A%20%0A%E2%80%A2%20%EC%84%B1%ED%95%A8%3A%20%0A%E2%80%A2%20%EB%A1%9C%EA%B7%B8%EC%9D%B8%ED%95%A0%20Gmail%20%EC%A3%BC%EC%86%8C%3A%20%0A%0A%EA%B0%90%EC%82%AC%ED%95%A9%EB%8B%88%EB%8B%A4." style="color:var(--blue);text-decoration:none">jerry5026@gmail.com</a>
+          </div>
+        </div>
+        <div style="font-size:12.5px;color:var(--gray-600);line-height:1.7;margin-top:12px">
+          <b>메일에 아래 정보를 함께 보내주세요</b>
+          <ul style="padding-left:20px;margin-top:4px">
+            <li>소속 학교</li>
+            <li>성함</li>
+            <li>로그인에 사용하실 <b>Gmail 주소</b></li>
+          </ul>
+          <div style="color:var(--gray-400);margin-top:6px">보내주신 계정을 승인 목록에 추가하면 바로 로그인하실 수 있습니다.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 개발자용 자체 배포 안내 (기본 접힘) -->
+    <div class="setup-info" style="margin-top:10px">
+      <button class="setup-toggle" onclick="toggleSetup('dev')">
+        🛠️ 자체 배포 (개발자용)
+        <span id="setup-arrow-dev">▼</span>
+      </button>
+      <div class="setup-body" id="setup-body-dev">
+        <div style="font-size:12.5px;color:var(--gray-600);margin-bottom:10px">
+          이 코드를 본인 도메인에 직접 올리고 싶다면, 아래 5단계로 Google Cloud 설정이 필요합니다.
+        </div>
         <ol>
           <li><a href="https://console.cloud.google.com" target="_blank" style="color:var(--blue)">Google Cloud Console</a>에서 새 프로젝트 생성</li>
           <li>API 라이브러리에서 <b>Google Forms API</b>, <b>Google Drive API</b> 사용 설정</li>
@@ -808,9 +843,14 @@ function switchTab(id,btn) {
   if (id==='ai') updateAIPanel();
   if (id==='settings') renderSettingsTab();
 }
-function toggleSetup() {
-  const b=document.getElementById('setup-body'); b.classList.toggle('open');
-  document.getElementById('setup-arrow').textContent=b.classList.contains('open')?'▲':'▼';
+function toggleSetup(which) {
+  // 하위 호환: 인자 없으면 dev (기존 동작)
+  const id=which||'dev';
+  const b=document.getElementById('setup-body-'+id);
+  const arr=document.getElementById('setup-arrow-'+id);
+  if(!b||!arr) return;
+  b.classList.toggle('open');
+  arr.textContent=b.classList.contains('open')?'▲':'▼';
 }
 function toast(msg,type='') {
   const t=document.getElementById('toast'); t.textContent=msg; t.className=['show',type].filter(Boolean).join(' ');
