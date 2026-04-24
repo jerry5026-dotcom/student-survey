@@ -68,16 +68,24 @@
     .card-title { font-size:16px; font-weight:600; margin-bottom:16px; }
 
     /* QUESTIONS TABLE */
-    .questions-table { width:100%; border-collapse:collapse; font-size:13px; }
-    .questions-table th { background:var(--blue); color:#fff; padding:10px 12px; text-align:left; font-weight:500; font-size:12px; }
-    .questions-table th:first-child { border-radius:6px 0 0 0; }
-    .questions-table th:last-child { border-radius:0 6px 0 0; }
-    .questions-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); vertical-align:top; }
+    .questions-table { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
+    .questions-table th { background:var(--blue); color:#fff; padding:11px 12px; text-align:left; font-weight:500; font-size:12px; white-space:nowrap; }
+    .questions-table th:first-child { border-radius:6px 0 0 0; width:44px; }
+    .questions-table th:last-child { border-radius:0 6px 0 0; width:152px; }
+    .questions-table th:nth-child(3) { width:190px; }
+    .questions-table th:nth-child(4) { width:100px; }
+    .questions-table th:nth-child(5) { width:64px; }
+    .questions-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); vertical-align:middle; overflow:hidden; }
+    .questions-table td:first-child { text-align:center; color:var(--gray-400); font-size:12px; white-space:nowrap; }
+    .questions-table td:nth-child(3) { font-size:12px; }
+    .questions-table td:nth-child(4) { white-space:nowrap; }
+    .questions-table td:nth-child(5) { white-space:nowrap; text-align:center; }
+    .questions-table td:nth-child(6) { white-space:nowrap; }
     .questions-table tr:hover td { background:var(--gray-50); }
-    .action-btns { display:flex; gap:4px; flex-wrap:wrap; }
+    .action-btns { display:flex; gap:4px; flex-wrap:nowrap; align-items:center; }
 
     /* BADGES */
-    .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:500; margin:1px; }
+    .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:500; margin:1px; white-space:nowrap; }
     .badge-blue { background:var(--blue-light); color:var(--blue); }
     .badge-gray { background:var(--gray-100); color:var(--gray-600); }
     .badge-orange { background:#fff8e1; color:#e37400; }
@@ -251,8 +259,8 @@
         <div style="overflow-x:auto">
           <table class="questions-table">
             <thead><tr>
-              <th style="width:36px">#</th><th>질문</th><th style="width:220px">선택지</th>
-              <th style="width:80px">유형</th><th style="width:56px">필수</th><th style="width:120px">관리</th>
+              <th>#</th><th>질문</th><th>선택지</th>
+              <th>유형</th><th>필수</th><th>관리</th>
             </tr></thead>
             <tbody id="questions-tbody"></tbody>
           </table>
@@ -637,16 +645,16 @@ function renderQuestions() {
   const tb=document.getElementById('questions-tbody'); if(!tb)return;
   if(!questions.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400)">질문이 없습니다.</td></tr>`;return;}
   tb.innerHTML=questions.map((q,i)=>`<tr>
-    <td style="text-align:center;color:var(--gray-400);font-size:12px">${i+1}</td>
-    <td style="max-width:300px">${esc(q.title)}</td>
-    <td style="font-size:12px">${q.options.length?q.options.slice(0,3).map(o=>`<span class="badge badge-gray">${esc(o)}</span>`).join(' ')+(q.options.length>3?`<span class="text-muted"> +${q.options.length-3}</span>`:''):'<span class="text-muted">주관식</span>'}</td>
+    <td>${i+1}</td>
+    <td style="word-break:keep-all">${esc(q.title)}</td>
+    <td>${q.options.length?q.options.slice(0,3).map(o=>`<span class="badge badge-gray">${esc(o)}</span>`).join('')+(q.options.length>3?`<span class="text-muted"> +${q.options.length-3}</span>`:''):'<span class="text-muted">주관식</span>'}</td>
     <td>${q.options.length?`<span class="badge ${q.multi?'badge-orange':'badge-blue'}">${q.multi?'복수선택':'단일선택'}</span>`:'<span class="badge badge-gray">서술형</span>'}</td>
-    <td style="text-align:center">${q.optional?'<span class="badge badge-gray">선택</span>':'<span class="badge badge-blue">필수</span>'}</td>
+    <td>${q.optional?'<span class="badge badge-gray">선택</span>':'<span class="badge badge-blue">필수</span>'}</td>
     <td><div class="action-btns">
-      <button class="btn btn-outline btn-sm" onclick="openEditModal(${i})">✏️</button>
-      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteQ(${i})">🗑️</button>
-      ${i>0?`<button class="btn btn-outline btn-sm" onclick="moveQ(${i},-1)">↑</button>`:''}
-      ${i<questions.length-1?`<button class="btn btn-outline btn-sm" onclick="moveQ(${i},1)">↓</button>`:''}
+      <button class="btn btn-outline btn-sm" onclick="openEditModal(${i})" title="수정">✏️</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteQ(${i})" title="삭제">🗑️</button>
+      <button class="btn btn-outline btn-sm" onclick="moveQ(${i},-1)" title="위로" ${i===0?'disabled':''} style="${i===0?'opacity:.3;cursor:not-allowed':''}">↑</button>
+      <button class="btn btn-outline btn-sm" onclick="moveQ(${i},1)" title="아래로" ${i===questions.length-1?'disabled':''} style="${i===questions.length-1?'opacity:.3;cursor:not-allowed':''}">↓</button>
     </div></td></tr>`).join('');
 }
 function openAddModal(){editingIdx=-1;document.getElementById('q-modal-title').textContent='질문 추가';['q-title','q-options'].forEach(id=>document.getElementById(id).value='');['q-multi','q-optional'].forEach(id=>document.getElementById(id).checked=false);document.getElementById('q-modal').style.display='flex';setTimeout(()=>document.getElementById('q-title').focus(),50);}
