@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>학생 기초조사 및 상담 도우미</title>
   <script src="https://accounts.google.com/gsi/client"></script>
-  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
     :root {
@@ -759,7 +759,7 @@ async function loadResponses() {
     const formData=await apiFetch(`https://forms.googleapis.com/v1/forms/${formId}`);
     const qMap={};(formData.items||[]).forEach(item=>{const qId=item.questionItem?.question?.questionId;if(qId)qMap[qId]=item.title;});
     const data=await apiFetch(`https://forms.googleapis.com/v1/forms/${formId}/responses`);
-    allResponses=(data.responses||[]).map(r=>{const obj={};for(const [qId,ans] of Object.entries(r.answers||{})){obj[qMap[qId]||qId]=(ans.textAnswers?.answers||[]).map(a=>a.value).join(', ');}return obj;});
+    allResponses=(data.responses||[]).map(r=>{const obj={__submitTime__:r.createTime||r.lastSubmittedTime||''};for(const [qId,ans] of Object.entries(r.answers||{})){obj[qMap[qId]||qId]=(ans.textAnswers?.answers||[]).map(a=>a.value).join(', ');}return obj;});
     allResponses.sort((a,b)=>(getName(a)||'').localeCompare(getName(b)||'','ko'));
     populateDropdown(); toast(`${allResponses.length}명의 응답을 불러왔습니다.`,'success');
   } catch(e){console.error(e);toast('응답 불러오기 실패: '+e.message,'error');}
@@ -1110,52 +1110,172 @@ function translateApiError(msg) {
 }
 
 // ════════════════════════════════════════
-//  엑셀 다운로드
+//  엑셀 다운로드 (ExcelJS)
 // ════════════════════════════════════════
-function downloadExcel() {
-  if (!allResponses || !allResponses.length) { toast('다운로드할 응답이 없습니다.', 'error'); return; }
-  if (typeof XLSX === 'undefined') { toast('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.', 'error'); return; }
+async function downloadExcel() {
+  if (!allResponses || !allResponses.length) { toast('다운로드할 응답이 없습니다.','error'); return; }
+  if (typeof ExcelJS === 'undefined') { toast('엑셀 라이브러리 로딩 중입니다. 잠시 후 다시 시도해주세요.','error'); return; }
 
-  // ── 헤더 수집 (이름을 앞으로) ──
-  const hSet = new Set();
-  allResponses.forEach(r => Object.keys(r).forEach(k => hSet.add(k)));
-  const headers = Array.from(hSet);
-  const nameIdx = headers.findIndex(h => /이름/.test(h));
-  if (nameIdx > 0) headers.unshift(headers.splice(nameIdx, 1)[0]);
+  // 컬럼 번호 → 엑셀 알파벳 (1→A, 27→AA)
+  function col(n){let s='';while(n>0){let r=(n-1)%26;s=String.fromCharCode(65+r)+s;n=Math.floor((n-1)/26);}return s;}
 
-  // ── Sheet1: 전체응답 ──
-  const dataRows = allResponses.map(r => headers.map(h => r[h] || ''));
-  const ws1 = XLSX.utils.aoa_to_sheet([headers, ...dataRows]);
-  ws1['!cols'] = headers.map(h => ({ wch: Math.min(Math.max(h.length * 1.8, 14), 45) }));
+  // ── 헤더 수집 (이름 첫번째, 내부 키 제외) ──
+  const hSet=new Set();
+  allResponses.forEach(r=>Object.keys(r).forEach(k=>{if(k!=='__submitTime__')hSet.add(k);}));
+  const allHdr=Array.from(hSet);
+  const ni=allHdr.findIndex(h=>/이름/.test(h));
+  if(ni>0)allHdr.unshift(allHdr.splice(ni,1)[0]);
 
-  // ── Sheet2: 학생조회 ──
-  const lastCol = XLSX.utils.encode_col(headers.length - 1);
-  const aoa2 = [
-    ['이름 검색 →', '← 여기에 학생 이름 입력'],
-    [],
-    ['질문', '응답'],
-    ...headers.map(h => [h, '']),
-  ];
-  const ws2 = XLSX.utils.aoa_to_sheet(aoa2);
+  // 전체응답 시트 컬럼: [제출시간, 이름, 학번, ...]
+  const fullHdr=['제출 시간',...allHdr];
+  // 이름 컬럼 위치 (1-based)
+  const nameColNum=fullHdr.findIndex(h=>/이름/.test(h))+1;
+  const nameColLetter=col(nameColNum);
 
-  // 수식: 이름으로 각 질문의 답 찾기
-  headers.forEach((h, i) => {
-    const row = 4 + i;
-    ws2[`B${row}`] = {
-      f: `IFERROR(INDEX('전체응답'!$A:$${lastCol},MATCH($B$1,'전체응답'!$A:$A,0),MATCH(A${row},'전체응답'!$1:$1,0)),"응답 없음")`,
-      t: 's', v: ''
-    };
+  // 카테고리별 색상
+  const catColors={
+    '📌 진로·입시':{hdr:'FF2E5EAA',bg:'FFD6E4F7',txt:'FF1A3A6A'},
+    '🏠 가족·환경':{hdr:'FF2D7A32',bg:'FFD5EFCE',txt:'FF1A4A1E'},
+    '📚 학습·공부':{hdr:'FFB45309',bg:'FFFEF3C7',txt:'FF7C3A00'},
+    '💡 성격·건강':{hdr:'FFC53030',bg:'FFFEE2E2',txt:'FF8B1A1A'},
+    '👥 학교생활' :{hdr:'FF0D7377',bg:'FFD5F4F5',txt:'FF064B4E'},
+    '📋 기타'     :{hdr:'FF4B5563',bg:'FFF3F4F6',txt:'FF1F2937'},
+  };
+
+  const wb=new ExcelJS.Workbook();
+  wb.creator='학생 기초조사 도우미';
+
+  // ════════════════════════════
+  //  시트1: 학생조회
+  // ════════════════════════════
+  const ws1=wb.addWorksheet('학생조회',{properties:{tabColor:{argb:'FF1A73E8'}}});
+  ws1.getColumn('A').width=36;
+  ws1.getColumn('B').width=54;
+
+  // 타이틀
+  ws1.mergeCells('A1:B1');
+  Object.assign(ws1.getCell('A1'),{
+    value:'📋 학생 기초조사 응답 조회',
+    font:{size:15,bold:true,color:{argb:'FF1A73E8'}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFE8F0FE'}},
+    alignment:{horizontal:'center',vertical:'middle'},
   });
-  ws2['!cols'] = [{ wch: 44 }, { wch: 58 }];
+  ws1.getRow(1).height=42;
+  ws1.getRow(2).height=8;
 
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws1, '전체응답');
-  XLSX.utils.book_append_sheet(wb, ws2, '학생조회');
+  // 이름 입력 행
+  const lc=ws1.getCell('A3');
+  Object.assign(lc,{
+    value:'🔍 학생 이름 입력 →',
+    font:{bold:true,size:12},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFF1F3F4'}},
+    alignment:{vertical:'middle',horizontal:'center'},
+    border:{top:{style:'thin',color:{argb:'FFCCCCCC'}},bottom:{style:'thin',color:{argb:'FFCCCCCC'}},left:{style:'thin',color:{argb:'FFCCCCCC'}},right:{style:'thin',color:{argb:'FFCCCCCC'}}},
+  });
+  const ic=ws1.getCell('B3');
+  Object.assign(ic,{
+    value:'',
+    font:{size:13,bold:true,color:{argb:'FF92400E'}},
+    fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFEF9C3'}},
+    alignment:{horizontal:'center',vertical:'middle'},
+    border:{top:{style:'medium',color:{argb:'FFF59E0B'}},bottom:{style:'medium',color:{argb:'FFF59E0B'}},left:{style:'medium',color:{argb:'FFF59E0B'}},right:{style:'medium',color:{argb:'FFF59E0B'}}},
+  });
+  ws1.getRow(3).height=32;
+  ws1.getRow(4).height=10;
 
-  const d = new Date();
-  const dateStr = `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}`;
-  XLSX.writeFile(wb, `학생기초조사_${dateStr}.xlsx`);
-  toast('📊 엑셀 파일이 다운로드되었습니다!', 'success');
+  // 카테고리별 Q&A 배치
+  const qKeys=allHdr.filter(h=>!/이름/.test(h));
+  const catMap={};
+  CAT_DEFS.forEach(c=>{catMap[c.key]=[];});
+  qKeys.forEach(q=>{for(const{key,rx}of CAT_DEFS){if(rx.test(q)){catMap[key].push(q);break;}}});
+
+  let r=5;
+  for(const{key}of CAT_DEFS){
+    const qs=catMap[key]; if(!qs||!qs.length)continue;
+    const c=catColors[key]||catColors['📋 기타'];
+
+    // 카테고리 헤더
+    ws1.mergeCells(`A${r}:B${r}`);
+    Object.assign(ws1.getCell(`A${r}`),{
+      value:key,
+      font:{bold:true,size:11,color:{argb:'FFFFFFFF'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:c.hdr}},
+      alignment:{horizontal:'left',vertical:'middle',indent:1},
+    });
+    ws1.getRow(r).height=26; r++;
+
+    for(const q of qs){
+      // 전체응답 시트에서 이 질문의 컬럼 번호 (fullHdr 기준, 1-based)
+      const qNum=fullHdr.indexOf(q)+1;
+      const qLetter=col(qNum);
+
+      // 질문 셀 (A)
+      Object.assign(ws1.getCell(`A${r}`),{
+        value:q,
+        font:{size:10,color:{argb:c.txt}},
+        fill:{type:'pattern',pattern:'solid',fgColor:{argb:c.bg}},
+        alignment:{vertical:'middle',wrapText:true},
+        border:{bottom:{style:'hair',color:{argb:'FFE0E0E0'}},right:{style:'thin',color:{argb:'FFDDDDDD'}}},
+      });
+      // 응답 셀 (B) — INDEX/MATCH 수식
+      Object.assign(ws1.getCell(`B${r}`),{
+        value:{formula:`IFERROR(INDEX('전체응답'!${qLetter}:${qLetter},MATCH($B$3,'전체응답'!${nameColLetter}:${nameColLetter},0)),"")`},
+        font:{size:11},
+        fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FFFFFFFF'}},
+        alignment:{vertical:'middle',wrapText:true},
+        border:{bottom:{style:'hair',color:{argb:'FFE0E0E0'}}},
+      });
+      ws1.getRow(r).height=22; r++;
+    }
+    ws1.getRow(r).height=6; r++;
+  }
+  ws1.views=[{state:'frozen',ySplit:3}];
+
+  // ════════════════════════════
+  //  시트2: 전체응답 (시간순)
+  // ════════════════════════════
+  const ws2=wb.addWorksheet('전체응답',{properties:{tabColor:{argb:'FF137333'}}});
+
+  // 헤더 행
+  const hr=ws2.addRow(fullHdr);
+  hr.height=32;
+  hr.eachCell(cell=>{
+    Object.assign(cell,{
+      font:{color:{argb:'FFFFFFFF'},bold:true,size:11},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF1A73E8'}},
+      alignment:{vertical:'middle',horizontal:'center',wrapText:true},
+      border:{bottom:{style:'thin',color:{argb:'FFDDDDDD'}},right:{style:'thin',color:{argb:'FF3A83F5'}}},
+    });
+  });
+
+  // 시간순 정렬 후 데이터 행
+  const sorted=[...allResponses].sort((a,b)=>(a.__submitTime__||'')<(b.__submitTime__||'')?-1:1);
+  sorted.forEach((res,i)=>{
+    const ts=res.__submitTime__?new Date(res.__submitTime__).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
+    const row=ws2.addRow([ts,...allHdr.map(h=>res[h]||'')]);
+    const bg=i%2===0?'FFFFFFFF':'FFF8FAFB';
+    row.height=20;
+    row.eachCell(cell=>{
+      cell.fill={type:'pattern',pattern:'solid',fgColor:{argb:bg}};
+      cell.alignment={vertical:'middle',wrapText:false};
+      cell.border={bottom:{style:'hair',color:{argb:'FFE0E0E0'}},right:{style:'hair',color:{argb:'FFE0E0E0'}}};
+    });
+  });
+
+  ws2.columns=fullHdr.map((h,i)=>({width:i===0?20:Math.min(Math.max(h.length*2.2,12),36)}));
+  ws2.views=[{state:'frozen',ySplit:1}];
+
+  // ── 다운로드 ──
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const d=new Date();
+  a.download=`학생기초조사_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📊 엑셀 파일이 다운로드되었습니다!','success');
 }
 </script>
 </body>
