@@ -155,8 +155,28 @@
     /* MODAL */
     .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; }
     .modal { background:#fff; border-radius:12px; padding:28px; width:100%; max-width:540px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-lg { max-width:760px; }
     .modal-title { font-size:18px; font-weight:600; margin-bottom:20px; }
     .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+
+    /* HELP MODAL */
+    .help-section { margin-bottom:22px; padding-bottom:18px; border-bottom:1px solid var(--gray-100); }
+    .help-section:last-child { border-bottom:none; margin-bottom:0; }
+    .help-section h3 { font-size:15px; color:var(--blue); margin-bottom:10px; display:flex; align-items:center; gap:8px; }
+    .help-section ol, .help-section ul { padding-left:22px; font-size:13.5px; line-height:1.75; color:var(--gray-800); }
+    .help-section li { margin-bottom:6px; }
+    .help-section code { background:var(--gray-100); padding:1px 6px; border-radius:4px; font-size:12px; color:var(--blue); }
+    .help-section b { color:var(--gray-900); }
+    .help-tip { background:#fff8e1; border-left:3px solid var(--orange); padding:8px 12px; border-radius:4px; font-size:12.5px; color:var(--gray-800); margin-top:8px; }
+
+    /* DRAG & DROP */
+    .q-drag-handle { cursor:grab; color:var(--gray-400); user-select:none; font-size:14px; padding:0 4px; }
+    .q-drag-handle:active { cursor:grabbing; }
+    .questions-table tr[draggable="true"] { transition:background .1s; }
+    .questions-table tr.dragging { opacity:.4; background:var(--blue-light) !important; }
+    .questions-table tr.drag-over-top td { border-top:3px solid var(--blue) !important; }
+    .questions-table tr.drag-over-bot td { border-bottom:3px solid var(--blue) !important; }
+    .questions-table th:first-child { width:60px; }
     textarea { width:100%; padding:10px 14px; border:1px solid var(--gray-200); border-radius:var(--radius); font-size:13px; resize:vertical; outline:none; font-family:var(--font); line-height:1.5; }
     textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,115,232,.15); }
     .form-label { display:block; font-size:13px; font-weight:500; color:var(--gray-800); margin-bottom:6px; }
@@ -240,6 +260,7 @@
     <button class="tab-btn" data-tab="responses" onclick="switchTab('responses',this)">👤 학생 응답</button>
     <button class="tab-btn" data-tab="ai"        onclick="switchTab('ai',this)">🤖 AI 상담 질문</button>
     <button class="tab-btn" data-tab="settings"  onclick="switchTab('settings',this)">⚙️ AI 설정</button>
+    <button class="tab-btn" onclick="openHelpModal()" style="margin-left:auto">📖 사용법</button>
   </nav>
 
   <main class="app-content">
@@ -253,6 +274,9 @@
             <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 질문 추가</button>
             <button class="btn btn-outline btn-sm" onclick="saveAsMyDefault()" title="현재 질문 목록을 나만의 기본값으로 저장">⭐ 내 기본값으로 저장</button>
             <button class="btn btn-outline btn-sm" onclick="resetToDefaults()">🔄 기본값으로 초기화</button>
+            <button class="btn btn-outline btn-sm" onclick="downloadQuestionTemplate()" title="현재 질문 목록을 엑셀 파일로 다운로드">📥 질문 엑셀 다운</button>
+            <button class="btn btn-outline btn-sm" onclick="document.getElementById('q-upload-input').click()" title="엑셀 파일을 업로드해 질문 목록을 반영">📤 질문 엑셀 업로드</button>
+            <input type="file" id="q-upload-input" accept=".xlsx" style="display:none" onchange="uploadQuestionTemplate(event)">
           </div>
         </div>
         <div class="info-box" style="margin-top:16px">
@@ -362,8 +386,12 @@
             <div style="font-size:15px;font-weight:600" id="ai-student-name">학생 미선택</div>
             <div class="text-muted">학생 응답을 분석하여 상담 질문을 자동 생성합니다</div>
           </div>
-          <button class="btn btn-green" onclick="generateAIQuestions()" id="ai-btn" disabled>✨ AI 질문 생성</button>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-green" onclick="generateAIQuestions()" id="ai-btn" disabled>✨ 선택 학생 생성</button>
+            <button class="btn btn-outline" onclick="generateAllAI()" id="ai-btn-all" disabled>👥 전체 학생 일괄 생성</button>
+          </div>
         </div>
+        <div id="ai-bulk-progress" style="display:none;margin-bottom:16px;padding:14px 18px;background:var(--blue-light);border-radius:var(--radius);font-size:13.5px;color:var(--blue);line-height:1.6"></div>
 
         <div id="ai-result-area">
           <div class="ai-placeholder">
@@ -430,6 +458,83 @@
     <div class="modal-actions">
       <button class="btn btn-outline" onclick="closeModal()">취소</button>
       <button class="btn btn-primary" style="width:auto" onclick="saveQuestion()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- HELP MODAL -->
+<div id="help-modal" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeHelpModal()">
+  <div class="modal modal-lg">
+    <div class="modal-title">📖 사용 방법 안내</div>
+
+    <div class="help-section">
+      <h3>🚀 1. 시작하기</h3>
+      <ol>
+        <li><b>Google 계정으로 로그인</b> — 메인 화면에서 Google 계정 로그인 버튼을 클릭합니다.</li>
+        <li>처음 사용한다면 Google Cloud Console에서 <b>Google Forms API</b>와 <b>Google Drive API</b>를 활성화해야 합니다 (로그인 화면 하단의 ⚙️ 설정 안내 참고).</li>
+      </ol>
+    </div>
+
+    <div class="help-section">
+      <h3>📝 2. 질문 관리 탭</h3>
+      <ol>
+        <li><b>기본 질문 39개</b>가 로드되어 있습니다 — 고등학생 학기 초 기초조사에 최적화된 구성입니다.</li>
+        <li><b>+ 질문 추가</b> — 새 질문을 직접 추가합니다. 서술형/단일선택/복수선택 지원.</li>
+        <li><b>드래그로 순서 변경</b> — 행 왼쪽의 <code>⋮⋮</code> 핸들을 잡고 끌어올리거나 내려 순서를 바꿉니다.</li>
+        <li><b>⭐ 내 기본값으로 저장</b> — 지금 설정한 질문 목록을 나만의 기본값으로 저장합니다.</li>
+        <li><b>🔄 기본값으로 초기화</b> — 저장한 나만의 기본값(없으면 공장 초기값)으로 돌립니다.</li>
+        <li><b>📥 질문 엑셀 다운 / 📤 업로드</b> — 질문 목록을 엑셀로 받아 오프라인에서 수정하고, 다시 업로드해 반영할 수 있습니다.</li>
+      </ol>
+      <div class="help-tip">💡 업로드 엑셀 양식은 다운로드한 파일과 동일한 헤더(<code>번호 / 질문 / 선택지 / 유형 / 필수</code>)를 유지해야 합니다.</div>
+    </div>
+
+    <div class="help-section">
+      <h3>📋 3. 폼 생성 탭</h3>
+      <ol>
+        <li><b>📋 Google Form 만들기</b> 버튼을 누르면 현재 질문 목록으로 구글 폼이 자동 생성됩니다.</li>
+        <li><b>학생 배포 링크</b>를 복사해 학생들에게 공유하세요.</li>
+        <li><b>교사 수정 링크</b>로는 폼을 직접 수정할 수 있습니다.</li>
+      </ol>
+    </div>
+
+    <div class="help-section">
+      <h3>👤 4. 학생 응답 탭</h3>
+      <ol>
+        <li><b>🔄 응답 새로고침</b>으로 학생 응답을 불러옵니다.</li>
+        <li>학생을 선택하면 카테고리별(진로·가족·학습·성격 등)로 정리된 응답을 확인합니다.</li>
+        <li><b>📊 엑셀 다운로드</b>로 전체 응답을 다운받습니다:
+          <ul>
+            <li><b>시트1 학생조회</b> — B3에 학생 이름을 입력하면 해당 학생의 응답이 수식으로 자동 표시</li>
+            <li><b>시트2 전체응답</b> — 제출 시각 순으로 정렬된 원본 데이터</li>
+            <li>AI 상담 질문을 생성한 경우, D5 셀부터 해당 학생의 AI 질문이 자동으로 표시됩니다</li>
+          </ul>
+        </li>
+      </ol>
+    </div>
+
+    <div class="help-section">
+      <h3>🤖 5. AI 상담 질문 탭</h3>
+      <ol>
+        <li>먼저 <b>⚙️ AI 설정</b> 탭에서 사용할 AI(OpenAI/Claude/Gemini) 모델과 API 키를 설정합니다.</li>
+        <li><b>Gemini 3 Flash / Flash Lite</b>는 무료(1,500회/일)로 사용할 수 있어 입문자에게 권장합니다.</li>
+        <li><b>✨ 선택 학생 생성</b> — 학생 응답 탭에서 선택한 학생에 대해 개별 질문 생성</li>
+        <li><b>👥 전체 학생 일괄 생성</b> — 응답한 모든 학생에 대해 차례로 AI 질문 생성 (실패 건은 건너뜀)</li>
+        <li>생성된 질문은 자동 저장되며, 다시 접속해도 엑셀에 포함됩니다.</li>
+      </ol>
+      <div class="help-tip">⚠️ 일괄 생성은 학생 수 × API 호출이 발생하므로 유료 모델의 경우 비용이 발생합니다. 모델을 바꾸면 해당 모델 한도 내에서 다시 호출됩니다.</div>
+    </div>
+
+    <div class="help-section">
+      <h3>⚙️ 6. AI 설정 탭</h3>
+      <ol>
+        <li><b>제공사 선택</b> → <b>모델 선택</b> → <b>API 키 입력</b> 3단계 순서로 진행합니다.</li>
+        <li>API 키 입력 후 <b>유효성 확인</b>을 누르거나, 붙여넣기 하면 자동으로 검증됩니다.</li>
+        <li>여러 제공사의 키를 모두 등록하면 AI 탭 드롭다운에서 자유롭게 전환할 수 있습니다.</li>
+      </ol>
+    </div>
+
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="width:auto" onclick="closeHelpModal()">닫기</button>
     </div>
   </div>
 </div>
@@ -677,8 +782,13 @@ function saveQs(){localStorage.setItem('questions',JSON.stringify(questions));}
 function renderQuestions() {
   const tb=document.getElementById('questions-tbody'); if(!tb)return;
   if(!questions.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400)">질문이 없습니다.</td></tr>`;return;}
-  tb.innerHTML=questions.map((q,i)=>`<tr>
-    <td>${i+1}</td>
+  tb.innerHTML=questions.map((q,i)=>`<tr draggable="true" data-idx="${i}"
+      ondragstart="onRowDragStart(event,${i})"
+      ondragover="onRowDragOver(event)"
+      ondragleave="onRowDragLeave(event)"
+      ondrop="onRowDrop(event,${i})"
+      ondragend="onRowDragEnd(event)">
+    <td><span class="q-drag-handle" title="드래그로 순서 변경">⋮⋮</span> ${i+1}</td>
     <td style="word-break:keep-all">${esc(q.title)}</td>
     <td>${q.options.length?q.options.slice(0,3).map(o=>`<span class="badge badge-gray">${esc(o)}</span>`).join('')+(q.options.length>3?`<span class="text-muted"> +${q.options.length-3}</span>`:''):'<span class="text-muted">주관식</span>'}</td>
     <td>${q.options.length?`<span class="badge ${q.multi?'badge-orange':'badge-blue'}">${q.multi?'복수선택':'단일선택'}</span>`:'<span class="badge badge-gray">서술형</span>'}</td>
@@ -686,9 +796,51 @@ function renderQuestions() {
     <td><div class="action-btns">
       <button class="btn btn-outline btn-sm" onclick="openEditModal(${i})" title="수정">✏️</button>
       <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteQ(${i})" title="삭제">🗑️</button>
-      <button class="btn btn-outline btn-sm" onclick="moveQ(${i},-1)" title="위로" ${i===0?'disabled':''} style="${i===0?'opacity:.3;cursor:not-allowed':''}">↑</button>
-      <button class="btn btn-outline btn-sm" onclick="moveQ(${i},1)" title="아래로" ${i===questions.length-1?'disabled':''} style="${i===questions.length-1?'opacity:.3;cursor:not-allowed':''}">↓</button>
     </div></td></tr>`).join('');
+}
+
+// ── 드래그 앤 드롭 순서 변경 ──
+let dragSrcIdx=-1;
+function onRowDragStart(e,idx){
+  dragSrcIdx=idx;
+  e.dataTransfer.effectAllowed='move';
+  try{e.dataTransfer.setData('text/plain',String(idx));}catch(_){}
+  e.currentTarget.classList.add('dragging');
+}
+function onRowDragOver(e){
+  e.preventDefault();
+  e.dataTransfer.dropEffect='move';
+  const tr=e.currentTarget;
+  const rect=tr.getBoundingClientRect();
+  const midY=rect.top+rect.height/2;
+  tr.classList.remove('drag-over-top','drag-over-bot');
+  tr.classList.add(e.clientY<midY?'drag-over-top':'drag-over-bot');
+  return false;
+}
+function onRowDragLeave(e){
+  e.currentTarget.classList.remove('drag-over-top','drag-over-bot');
+}
+function onRowDrop(e,idx){
+  e.preventDefault();
+  e.stopPropagation();
+  const tr=e.currentTarget;
+  const rect=tr.getBoundingClientRect();
+  const midY=rect.top+rect.height/2;
+  const dropBelow=e.clientY>=midY;
+  tr.classList.remove('drag-over-top','drag-over-bot');
+  if(dragSrcIdx===-1||dragSrcIdx===idx)return false;
+  let targetIdx=dropBelow?idx+1:idx;
+  const moved=questions.splice(dragSrcIdx,1)[0];
+  if(dragSrcIdx<targetIdx) targetIdx--; // splice로 인덱스 보정
+  questions.splice(targetIdx,0,moved);
+  dragSrcIdx=-1;
+  saveQs(); renderQuestions();
+  return false;
+}
+function onRowDragEnd(e){
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.questions-table tr').forEach(r=>r.classList.remove('drag-over-top','drag-over-bot'));
+  dragSrcIdx=-1;
 }
 function openAddModal(){editingIdx=-1;document.getElementById('q-modal-title').textContent='질문 추가';['q-title','q-options'].forEach(id=>document.getElementById(id).value='');['q-multi','q-optional'].forEach(id=>document.getElementById(id).checked=false);document.getElementById('q-modal').style.display='flex';setTimeout(()=>document.getElementById('q-title').focus(),50);}
 function openEditModal(i){editingIdx=i;const q=questions[i];document.getElementById('q-modal-title').textContent='질문 수정';document.getElementById('q-title').value=q.title;document.getElementById('q-options').value=q.options.join('\n');document.getElementById('q-multi').checked=q.multi;document.getElementById('q-optional').checked=q.optional;document.getElementById('q-modal').style.display='flex';}
@@ -980,6 +1132,8 @@ function updateAIPanel() {
 
   document.getElementById('ai-no-student').style.display=name?'none':'block';
   document.getElementById('ai-btn').disabled=!name||!hasKey;
+  const bulkBtn=document.getElementById('ai-btn-all');
+  if(bulkBtn) bulkBtn.disabled=!hasKey||!allResponses.length;
   document.getElementById('ai-student-name').textContent=name?`${name} 학생`:'학생 미선택';
 
   if(name&&aiMemory[name]){
@@ -1110,6 +1264,195 @@ function translateApiError(msg) {
 }
 
 // ════════════════════════════════════════
+//  도움말 모달
+// ════════════════════════════════════════
+function openHelpModal(){ document.getElementById('help-modal').style.display='flex'; }
+function closeHelpModal(){ document.getElementById('help-modal').style.display='none'; }
+
+// ════════════════════════════════════════
+//  AI 전체 학생 일괄 생성
+// ════════════════════════════════════════
+async function generateAllAI() {
+  const p=PROVIDERS[aiProvider];
+  const key=localStorage.getItem(p.keyStorage)||'';
+  if(!key||!p.validateKeyFormat(key)){toast('API 키를 먼저 설정해주세요.','error');return;}
+  if(!allResponses.length){toast('응답한 학생이 없습니다.','error');return;}
+
+  if(!confirm(`총 ${allResponses.length}명의 학생에 대해 AI 상담 질문을 일괄 생성합니다.\n\n⚠️ 학생 수 × API 호출이 발생합니다 (유료 모델은 비용 발생).\n⚠️ 실패한 학생은 건너뛰고 계속 진행합니다.\n\n진행하시겠습니까?`)) return;
+
+  const btn=document.getElementById('ai-btn-all');
+  const indivBtn=document.getElementById('ai-btn');
+  btn.disabled=true; indivBtn.disabled=true;
+  btn.innerHTML='<span class="spinner-sm spinner-sm-w"></span> 일괄 생성 중...';
+
+  const progress=document.getElementById('ai-bulk-progress');
+  progress.style.display='block';
+
+  let success=0, skipped=0, failed=0;
+  const failedNames=[];
+
+  for(let i=0;i<allResponses.length;i++){
+    const r=allResponses[i];
+    const name=getName(r)||`학생${i+1}`;
+    progress.innerHTML=`⏳ <b>${i+1} / ${allResponses.length}</b> — <b>${esc(name)}</b> 학생 분석 중... (성공 ${success} · 건너뜀 ${skipped} · 실패 ${failed})`;
+
+    const filtered=Object.entries(r).filter(([k])=>!/이름/.test(k)&&!/(timestamp|응답\s*시간|제출\s*시각|타임)/i.test(k)&&k!=='__submitTime__');
+    if(!filtered.length){ skipped++; continue; }
+
+    const responseText=filtered.map(([q,a])=>`- ${q}: ${a}`).join('\n');
+    const prompt=`${AI_PERSONA}\n\n아래는 '${name}' 학생의 기초조사 응답 내용입니다.\n\n[학생 응답 내용]\n${responseText}\n\n[요청]\n이 학생의 응답을 분석하여 상담 시 유용한 질문을 생성하라.\n- 중요도에 따라 우선순위가 높은 질문을 먼저 제시하고, 최소 10개에서 최대 30개 사이로 생성하라(번호 목록 형태).\n- 질문은 진로, 가족, 학습, 습관, 성격 등 주요 영역을 균형 있게 포함하라.\n- 각 질문은 학생의 응답에서 근거해야 하며, 개방형 질문으로 만들어라.\n- 출력은 번호가 붙은 질문 목록만 제시하고 다른 설명은 생략하라.`;
+
+    try {
+      let raw='';
+      if(aiProvider==='openai')       raw=await callOpenAI(prompt,aiModel,key);
+      else if(aiProvider==='claude')  raw=await callClaude(prompt,aiModel,key);
+      else if(aiProvider==='gemini')  raw=await callGemini(prompt,aiModel,key);
+      if(!raw) throw new Error('AI 응답이 비어 있습니다.');
+
+      let items=raw.split(/\n+/).map(s=>s.trim()).filter(s=>/^\d+[\).\-\s]/.test(s)).map(s=>s.replace(/^\d+[\).\-\s]*/,'').trim()).filter(Boolean);
+      if(items.length<5) items=raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+      items=items.slice(0,30);
+      const finalText=items.map((q,idx)=>`${idx+1}. ${q}`).join('\n');
+      aiMemory[name]=finalText;
+      localStorage.setItem('aiMemory',JSON.stringify(aiMemory));
+      success++;
+    } catch(err) {
+      console.error(`[${name}] AI 생성 실패:`,err);
+      failed++; failedNames.push(name);
+      // 건너뛰고 계속
+    }
+  }
+
+  progress.innerHTML=`✅ <b>일괄 생성 완료!</b><br>성공 <b>${success}명</b> · 건너뜀 <b>${skipped}명</b> · 실패 <b>${failed}명</b>${failedNames.length?`<br><span style="font-size:12px;color:var(--red)">실패: ${failedNames.map(esc).join(', ')}</span>`:''}`;
+  toast(`일괄 생성 완료 (성공 ${success}·실패 ${failed})`,failed?'error':'success');
+
+  btn.disabled=false; indivBtn.disabled=false;
+  btn.innerHTML='👥 전체 학생 일괄 생성';
+  updateAIPanel();
+}
+
+// ════════════════════════════════════════
+//  질문 목록 엑셀 다운로드 / 업로드
+// ════════════════════════════════════════
+async function downloadQuestionTemplate() {
+  if(typeof ExcelJS==='undefined'){toast('엑셀 라이브러리 로딩 중입니다.','error');return;}
+  if(!questions.length){toast('다운로드할 질문이 없습니다.','error');return;}
+
+  const wb=new ExcelJS.Workbook();
+  const ws=wb.addWorksheet('질문 목록',{properties:{tabColor:{argb:'FF1A73E8'}}});
+  ws.columns=[
+    {header:'번호',width:8},
+    {header:'질문',width:56},
+    {header:'선택지 (한 줄에 하나씩)',width:40},
+    {header:'유형',width:14},
+    {header:'필수',width:10},
+  ];
+  // 헤더 스타일
+  ws.getRow(1).eachCell(c=>{
+    c.font={bold:true,color:{argb:'FFFFFFFF'},size:12};
+    c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF1A73E8'}};
+    c.alignment={vertical:'middle',horizontal:'center'};
+    c.border={bottom:{style:'thin',color:{argb:'FFDDDDDD'}}};
+  });
+  ws.getRow(1).height=30;
+
+  questions.forEach((q,i)=>{
+    const type=q.options.length?(q.multi?'복수선택':'단일선택'):'서술형';
+    const required=q.optional?'선택':'필수';
+    const row=ws.addRow([i+1,q.title,q.options.join('\n'),type,required]);
+    row.alignment={vertical:'middle',wrapText:true};
+    const lines=Math.max(1,q.options.length,Math.ceil(q.title.length/28));
+    row.height=Math.max(22,lines*18);
+    row.getCell(1).alignment={vertical:'middle',horizontal:'center'};
+    row.getCell(4).alignment={vertical:'middle',horizontal:'center'};
+    row.getCell(5).alignment={vertical:'middle',horizontal:'center'};
+    row.getCell(4).font={color:{argb:type==='서술형'?'FF5F6368':(type==='복수선택'?'FFE37400':'FF1A73E8')},bold:true};
+    row.getCell(5).font={color:{argb:required==='필수'?'FF1A73E8':'FF5F6368'},bold:true};
+  });
+  ws.views=[{state:'frozen',ySplit:1}];
+
+  // 안내 시트
+  const info=wb.addWorksheet('작성 안내');
+  info.columns=[{width:90}];
+  [
+    '📌 이 엑셀 파일을 수정한 뒤 앱의 "📤 질문 엑셀 업로드" 버튼으로 다시 올리면 질문 목록이 교체됩니다.',
+    '',
+    '[컬럼 설명]',
+    '• 번호: 자동으로 재부여됩니다. 순서를 바꾸려면 행을 위아래로 이동하세요.',
+    '• 질문: 필수. 학생에게 보여질 질문 문구.',
+    '• 선택지: 객관식인 경우 "한 줄에 하나씩" 입력. 비워두면 서술형으로 처리됩니다.',
+    '• 유형: "서술형" / "단일선택" / "복수선택" 중 하나. (선택지가 있어도 "서술형"이면 주관식으로 처리)',
+    '• 필수: "필수" 또는 "선택". 학생이 반드시 응답해야 하면 "필수".',
+    '',
+    '⚠️ 헤더 행(1행)은 절대 수정하지 마세요. 그대로 유지해야 업로드가 정상 인식됩니다.',
+  ].forEach(t=>info.addRow([t]));
+
+  const buf=await wb.xlsx.writeBuffer();
+  const blob=new Blob([buf],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  const d=new Date();
+  a.download=`기초조사_질문목록_${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}.xlsx`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('📥 질문 목록 엑셀이 다운로드되었습니다!','success');
+}
+
+async function uploadQuestionTemplate(evt) {
+  const file=evt.target.files?.[0];
+  evt.target.value=''; // 같은 파일 재업로드 가능하게
+  if(!file) return;
+  if(typeof ExcelJS==='undefined'){toast('엑셀 라이브러리 로딩 중입니다.','error');return;}
+
+  try {
+    const buf=await file.arrayBuffer();
+    const wb=new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
+    const ws=wb.getWorksheet('질문 목록')||wb.worksheets[0];
+    if(!ws){toast('엑셀에서 시트를 찾을 수 없습니다.','error');return;}
+
+    // 헤더 검증
+    const h1=String(ws.getRow(1).getCell(1).value||'').trim();
+    if(!/번호/.test(h1)){toast('헤더 형식이 올바르지 않습니다. 다운로드 양식을 그대로 사용해주세요.','error');return;}
+
+    const newQs=[];
+    ws.eachRow((row,rn)=>{
+      if(rn===1) return; // 헤더 건너뜀
+      const title=String(row.getCell(2).value||'').trim();
+      if(!title) return; // 빈 행 건너뜀
+      const opRaw=row.getCell(3).value;
+      const opText=opRaw&&opRaw.richText?opRaw.richText.map(t=>t.text).join(''):String(opRaw||'');
+      const options=opText.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+      const typeStr=String(row.getCell(4).value||'').trim();
+      const reqStr=String(row.getCell(5).value||'').trim();
+
+      const multi=/복수/.test(typeStr);
+      // "서술형"이면 선택지 있어도 주관식 처리
+      const isText=/서술/.test(typeStr) || !options.length;
+      const optional=/선택/.test(reqStr);
+
+      newQs.push({
+        title,
+        options: isText ? [] : options,
+        multi: isText ? false : multi,
+        optional,
+      });
+    });
+
+    if(!newQs.length){toast('업로드할 질문이 없습니다. (빈 파일)','error');return;}
+    if(!confirm(`엑셀에서 ${newQs.length}개 질문을 읽었습니다.\n현재 목록을 교체하시겠습니까?`)) return;
+
+    questions=newQs;
+    saveQs(); renderQuestions();
+    toast(`📤 ${newQs.length}개 질문이 업로드되었습니다!`,'success');
+  } catch(e) {
+    console.error(e);
+    toast('엑셀 파싱 실패: '+e.message,'error');
+  }
+}
+
+// ════════════════════════════════════════
 //  엑셀 다운로드 (ExcelJS)
 // ════════════════════════════════════════
 async function downloadExcel() {
@@ -1128,8 +1471,20 @@ async function downloadExcel() {
   const ni=allHdr.findIndex(h=>/이름/.test(h));
   if(ni>0)allHdr.unshift(allHdr.splice(ni,1)[0]);
 
-  // 전체응답 시트 컬럼: [제출시간, 이름, 학번, ...]
-  const fullHdr=['제출 시간',...allHdr];
+  // ── AI 상담 질문 데이터 수집 (학생별) ──
+  const aiMap={}; let maxAI=0;
+  allResponses.forEach(r=>{
+    const nm=getName(r)||'';
+    const txt=(aiMemory[nm]||'').trim();
+    if(!txt){aiMap[nm]=[]; return;}
+    const items=txt.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    aiMap[nm]=items;
+    if(items.length>maxAI) maxAI=items.length;
+  });
+  const aiHeaders=Array.from({length:maxAI},(_,i)=>`AI_Q${i+1}`);
+
+  // 전체응답 시트 컬럼: [제출시간, 이름, 학번, ..., AI_Q1, AI_Q2, ...]
+  const fullHdr=['제출 시간',...allHdr,...aiHeaders];
   // 이름 컬럼 위치 (1-based)
   const nameColNum=fullHdr.findIndex(h=>/이름/.test(h))+1;
   const nameColLetter=col(nameColNum);
@@ -1153,6 +1508,8 @@ async function downloadExcel() {
   const ws1=wb.addWorksheet('학생조회',{properties:{tabColor:{argb:'FF1A73E8'}}});
   ws1.getColumn('A').width=36;
   ws1.getColumn('B').width=54;
+  ws1.getColumn('C').width=3;  // 구분 여백
+  ws1.getColumn('D').width=64; // AI 상담 질문 영역
 
   // 타이틀
   ws1.mergeCells('A1:B1');
@@ -1231,6 +1588,37 @@ async function downloadExcel() {
     }
     ws1.getRow(r).height=6; r++;
   }
+
+  // ── D열: AI 상담 질문 (학생 이름 입력 시 자동 표시) ──
+  if(maxAI>0){
+    // D4 타이틀
+    Object.assign(ws1.getCell('D4'),{
+      value:'🤖 AI 상담 질문 (검색한 학생의 생성 질문)',
+      font:{bold:true,size:12,color:{argb:'FFFFFFFF'}},
+      fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF7C3AED'}},
+      alignment:{vertical:'middle',horizontal:'left',indent:1},
+      border:{bottom:{style:'thin',color:{argb:'FFDDDDDD'}}},
+    });
+    ws1.getRow(4).height=28;
+
+    // D5부터 AI 질문 수식 (학생 이름 미입력 시 빈칸)
+    for(let i=0;i<maxAI;i++){
+      const aiColNum=fullHdr.indexOf(`AI_Q${i+1}`)+1;
+      const aiColLetter=col(aiColNum);
+      const rr=5+i;
+      Object.assign(ws1.getCell(`D${rr}`),{
+        value:{formula:`IF($B$3="","",IFERROR(INDEX('전체응답'!${aiColLetter}:${aiColLetter},MATCH($B$3,'전체응답'!${nameColLetter}:${nameColLetter},0)),""))`},
+        font:{size:11,color:{argb:'FF1F2937'}},
+        fill:{type:'pattern',pattern:'solid',fgColor:{argb:i%2===0?'FFF5F3FF':'FFFFFFFF'}},
+        alignment:{vertical:'middle',wrapText:true,indent:1},
+        border:{bottom:{style:'hair',color:{argb:'FFE5E7EB'}},left:{style:'thin',color:{argb:'FFDDD6FE'}}},
+      });
+      // D열 행 높이는 기존 행 높이와 충돌하지 않도록 max 로 보존 (이미 A/B 셀 기준으로 설정됨)
+      const existing=ws1.getRow(rr).height||0;
+      ws1.getRow(rr).height=Math.max(existing,40);
+    }
+  }
+
   ws1.views=[{state:'frozen',ySplit:3}];
 
   // ════════════════════════════
@@ -1254,7 +1642,10 @@ async function downloadExcel() {
   const sorted=[...allResponses].sort((a,b)=>(a.__submitTime__||'')<(b.__submitTime__||'')?-1:1);
   sorted.forEach((res,i)=>{
     const ts=res.__submitTime__?new Date(res.__submitTime__).toLocaleString('ko-KR',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}):'';
-    const rowVals=[ts,...allHdr.map(h=>res[h]||'')];
+    const nm=getName(res)||'';
+    const aiList=aiMap[nm]||[];
+    const aiCells=Array.from({length:maxAI},(_,k)=>aiList[k]||'');
+    const rowVals=[ts,...allHdr.map(h=>res[h]||''),...aiCells];
     const row=ws2.addRow(rowVals);
     const bg=i%2===0?'FFFFFFFF':'FFF8FAFB';
     // 행 높이: 각 셀 내용 길이와 컬럼 너비로 필요한 줄 수를 추정해 자동 계산
@@ -1271,7 +1662,7 @@ async function downloadExcel() {
     });
   });
 
-  ws2.columns=fullHdr.map((h,i)=>({width:i===0?20:Math.min(Math.max(h.length*2.2,12),36)}));
+  ws2.columns=fullHdr.map((h,i)=>({width:i===0?20:(/^AI_Q\d+$/.test(h)?50:Math.min(Math.max(h.length*2.2,12),36))}));
   ws2.views=[{state:'frozen',ySplit:1}];
 
   // ── 다운로드 ──
