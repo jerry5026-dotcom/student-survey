@@ -1,0 +1,989 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>학생 기초조사 및 상담 도우미</title>
+  <script src="https://accounts.google.com/gsi/client"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --blue:#1a73e8; --blue-dark:#1557b0; --blue-light:#e8f0fe;
+      --green:#137333; --green-light:#f0fdf4;
+      --orange:#f29900; --red:#d93025;
+      --gray-50:#f8f9fa; --gray-100:#f1f3f4; --gray-200:#e8eaed;
+      --gray-400:#9aa0a6; --gray-600:#5f6368; --gray-800:#3c4043; --gray-900:#202124;
+      --shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);
+      --radius:8px; --font:'Segoe UI','Noto Sans KR',system-ui,sans-serif;
+    }
+    body { font-family:var(--font); color:var(--gray-900); background:var(--gray-50); min-height:100vh; font-size:14px; line-height:1.5; }
+
+    /* LOGIN */
+    #login-screen { min-height:100vh; display:flex; align-items:center; justify-content:center; background:linear-gradient(135deg,#667eea,#764ba2); padding:20px; }
+    .login-card { background:#fff; border-radius:16px; padding:48px 40px; width:100%; max-width:440px; box-shadow:0 20px 60px rgba(0,0,0,.15); }
+    .login-logo { font-size:48px; text-align:center; margin-bottom:8px; }
+    .login-title { text-align:center; font-size:22px; font-weight:700; margin-bottom:4px; }
+    .login-subtitle { text-align:center; color:var(--gray-600); font-size:13px; margin-bottom:32px; }
+    .setup-info { margin-top:20px; border:1px solid var(--gray-200); border-radius:var(--radius); overflow:hidden; }
+    .setup-toggle { display:flex; align-items:center; justify-content:space-between; padding:11px 16px; background:var(--gray-50); cursor:pointer; font-size:13px; font-weight:500; color:var(--gray-600); border:none; width:100%; text-align:left; }
+    .setup-toggle:hover { background:var(--gray-100); }
+    .setup-body { padding:16px; display:none; font-size:13px; color:var(--gray-600); line-height:1.8; }
+    .setup-body.open { display:block; }
+    .setup-body ol { padding-left:20px; }
+    .setup-body li { margin-bottom:6px; }
+    .setup-body code { background:var(--gray-100); padding:1px 6px; border-radius:4px; font-size:12px; color:var(--blue); }
+
+    /* BUTTONS */
+    .btn { display:inline-flex; align-items:center; gap:6px; padding:9px 18px; border:none; border-radius:var(--radius); font-size:14px; font-weight:500; cursor:pointer; transition:all .15s; }
+    .btn-primary { background:var(--blue); color:#fff; width:100%; justify-content:center; padding:12px; font-size:15px; }
+    .btn-primary:hover { background:var(--blue-dark); }
+    .btn-outline { background:#fff; border:1px solid var(--gray-200); color:var(--gray-800); }
+    .btn-outline:hover { background:var(--gray-50); }
+    .btn-green { background:var(--green); color:#fff; }
+    .btn-green:hover { background:#0d6b2a; }
+    .btn-sm { padding:5px 11px; font-size:12px; }
+    .btn:disabled { opacity:.55; cursor:not-allowed; }
+
+    /* APP SHELL */
+    #app { min-height:100vh; display:flex; flex-direction:column; }
+    .app-header { background:var(--blue); color:#fff; padding:0 24px; height:56px; display:flex; align-items:center; justify-content:space-between; position:sticky; top:0; z-index:100; box-shadow:0 2px 4px rgba(0,0,0,.15); }
+    .app-header-title { font-size:17px; font-weight:600; }
+    .app-header-right { display:flex; align-items:center; gap:12px; }
+    .user-email { font-size:13px; opacity:.9; }
+    .btn-logout { background:rgba(255,255,255,.2); color:#fff; border:1px solid rgba(255,255,255,.3); padding:6px 14px; border-radius:20px; font-size:13px; cursor:pointer; }
+    .btn-logout:hover { background:rgba(255,255,255,.3); }
+
+    /* TABS */
+    .app-tabs { background:#fff; border-bottom:1px solid var(--gray-200); display:flex; padding:0 24px; overflow-x:auto; scrollbar-width:none; }
+    .app-tabs::-webkit-scrollbar { display:none; }
+    .tab-btn { padding:13px 18px; border:none; background:none; cursor:pointer; font-size:13px; font-weight:500; color:var(--gray-600); border-bottom:3px solid transparent; white-space:nowrap; transition:all .15s; }
+    .tab-btn:hover { color:var(--blue); }
+    .tab-btn.active { color:var(--blue); border-bottom-color:var(--blue); }
+    .app-content { flex:1; padding:24px; max-width:1200px; margin:0 auto; width:100%; }
+    .tab-panel { display:none; }
+    .tab-panel.active { display:block; }
+
+    /* CARDS */
+    .card { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); padding:24px; margin-bottom:16px; }
+    .card-title { font-size:16px; font-weight:600; margin-bottom:16px; }
+
+    /* QUESTIONS TABLE */
+    .questions-table { width:100%; border-collapse:collapse; font-size:13px; }
+    .questions-table th { background:var(--blue); color:#fff; padding:10px 12px; text-align:left; font-weight:500; font-size:12px; }
+    .questions-table th:first-child { border-radius:6px 0 0 0; }
+    .questions-table th:last-child { border-radius:0 6px 0 0; }
+    .questions-table td { padding:10px 12px; border-bottom:1px solid var(--gray-100); vertical-align:top; }
+    .questions-table tr:hover td { background:var(--gray-50); }
+    .action-btns { display:flex; gap:4px; flex-wrap:wrap; }
+
+    /* BADGES */
+    .badge { display:inline-block; padding:2px 8px; border-radius:12px; font-size:11px; font-weight:500; margin:1px; }
+    .badge-blue { background:var(--blue-light); color:var(--blue); }
+    .badge-gray { background:var(--gray-100); color:var(--gray-600); }
+    .badge-orange { background:#fff8e1; color:#e37400; }
+    .tier-paid { background:#fff3e0; color:#e65100; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; display:inline-block; }
+    .tier-free { background:#e8f5e9; color:#2e7d32; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; display:inline-block; }
+    .tier-freemium { background:#e3f2fd; color:#1565c0; font-size:11px; font-weight:600; padding:2px 8px; border-radius:10px; display:inline-block; }
+
+    /* URL BOX */
+    .url-box { display:flex; align-items:center; gap:8px; background:var(--gray-50); border:1px solid var(--gray-200); border-radius:var(--radius); padding:10px 14px; margin-top:8px; }
+    .url-box a { flex:1; color:var(--blue); text-decoration:none; font-size:13px; word-break:break-all; }
+    .url-box a:hover { text-decoration:underline; }
+    .copy-btn { padding:4px 10px; font-size:12px; border-radius:4px; border:1px solid var(--gray-200); background:#fff; cursor:pointer; white-space:nowrap; }
+    .copy-btn:hover { background:var(--gray-100); }
+
+    /* RESPONSES */
+    .student-selector { display:flex; align-items:center; gap:12px; margin-bottom:20px; flex-wrap:wrap; }
+    .student-select { flex:1; max-width:280px; padding:10px 14px; border:1px solid var(--gray-200); border-radius:var(--radius); font-size:14px; outline:none; }
+    .student-select:focus { border-color:var(--blue); }
+    .response-grid { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media(max-width:768px){ .response-grid{grid-template-columns:1fr;} }
+    .category-card { background:#fff; border-radius:var(--radius); box-shadow:var(--shadow); overflow:hidden; }
+    .category-header { padding:10px 16px; background:var(--blue-light); color:var(--blue); font-weight:600; font-size:13px; }
+    .qa-item { padding:10px 16px; border-bottom:1px solid var(--gray-100); }
+    .qa-item:last-child { border-bottom:none; }
+    .qa-question { color:var(--gray-600); font-size:12px; margin-bottom:4px; }
+    .qa-answer { color:var(--gray-900); font-size:13px; line-height:1.5; }
+
+    /* AI SETTINGS */
+    .provider-cards { display:grid; grid-template-columns:repeat(3,1fr); gap:12px; margin-bottom:20px; }
+    @media(max-width:600px){ .provider-cards{grid-template-columns:1fr;} }
+    .provider-card { border:2px solid var(--gray-200); border-radius:var(--radius); padding:16px; cursor:pointer; transition:all .15s; text-align:center; }
+    .provider-card:hover { border-color:var(--blue); }
+    .provider-card.selected { border-color:var(--blue); background:var(--blue-light); }
+    .provider-card .p-icon { font-size:28px; margin-bottom:6px; }
+    .provider-card .p-name { font-weight:600; font-size:14px; }
+    .provider-card .p-sub { font-size:12px; color:var(--gray-600); margin-top:2px; }
+
+    .model-list { border:1px solid var(--gray-200); border-radius:var(--radius); overflow:hidden; margin-bottom:20px; }
+    .model-item { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--gray-100); cursor:pointer; transition:background .1s; }
+    .model-item:last-child { border-bottom:none; }
+    .model-item:hover { background:var(--gray-50); }
+    .model-item.selected { background:var(--blue-light); }
+    .model-item input[type=radio] { width:16px; height:16px; accent-color:var(--blue); cursor:pointer; flex-shrink:0; }
+    .model-info { flex:1; }
+    .model-name { font-weight:500; font-size:14px; }
+    .model-desc { font-size:12px; color:var(--gray-600); margin-top:1px; }
+
+    /* KEY INPUT */
+    .key-input-wrap { position:relative; display:flex; gap:8px; align-items:center; }
+    .key-input-wrap input { flex:1; padding:10px 14px; border:2px solid var(--gray-200); border-radius:var(--radius); font-size:13px; outline:none; font-family:monospace; transition:border-color .2s; }
+    .key-input-wrap input:focus { border-color:var(--blue); }
+    .key-input-wrap input.key-ok  { border-color:#2e7d32; background:#f1fdf4; }
+    .key-input-wrap input.key-bad { border-color:var(--red); background:#fff5f5; }
+    .key-status { font-size:20px; flex-shrink:0; width:28px; text-align:center; }
+    .key-hint { font-size:12px; color:var(--gray-400); margin-top:6px; }
+    .key-msg { font-size:12px; margin-top:5px; font-weight:500; }
+    .key-msg.ok  { color:#2e7d32; }
+    .key-msg.bad { color:var(--red); }
+    .key-msg.checking { color:var(--gray-600); }
+
+    /* AI RESULT */
+    .ai-result { background:var(--green-light); border:1px solid #a8d5b5; border-radius:var(--radius); padding:20px; white-space:pre-line; color:var(--green); font-size:14px; line-height:1.8; }
+    .ai-placeholder { text-align:center; padding:60px 20px; color:var(--gray-400); }
+    .model-chip { display:inline-flex; align-items:center; gap:6px; background:var(--gray-100); border-radius:20px; padding:4px 12px; font-size:12px; color:var(--gray-600); }
+
+    /* MODAL */
+    .modal-overlay { position:fixed; inset:0; background:rgba(0,0,0,.5); z-index:1000; display:flex; align-items:center; justify-content:center; padding:20px; }
+    .modal { background:#fff; border-radius:12px; padding:28px; width:100%; max-width:540px; max-height:90vh; overflow-y:auto; box-shadow:0 20px 60px rgba(0,0,0,.2); }
+    .modal-title { font-size:18px; font-weight:600; margin-bottom:20px; }
+    .modal-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:20px; }
+    textarea { width:100%; padding:10px 14px; border:1px solid var(--gray-200); border-radius:var(--radius); font-size:13px; resize:vertical; outline:none; font-family:var(--font); line-height:1.5; }
+    textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,115,232,.15); }
+    .form-label { display:block; font-size:13px; font-weight:500; color:var(--gray-800); margin-bottom:6px; }
+    .form-group { margin-bottom:16px; }
+    input[type="checkbox"] { width:16px; height:16px; cursor:pointer; }
+
+    /* TOAST */
+    #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%) translateY(80px); background:var(--gray-900); color:#fff; padding:12px 24px; border-radius:24px; font-size:14px; z-index:9999; transition:transform .3s ease; max-width:400px; text-align:center; pointer-events:none; }
+    #toast.show { transform:translateX(-50%) translateY(0); }
+    #toast.success { background:var(--green); }
+    #toast.error { background:var(--red); }
+
+    /* LOADING */
+    .loading-overlay { position:fixed; inset:0; background:rgba(255,255,255,.85); z-index:500; display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px; }
+    .spinner-lg { width:48px; height:48px; border:4px solid var(--gray-200); border-top-color:var(--blue); border-radius:50%; animation:spin .8s linear infinite; }
+    .spinner-sm { width:16px; height:16px; border:2px solid rgba(0,0,0,.2); border-top-color:var(--blue); border-radius:50%; animation:spin .7s linear infinite; display:inline-block; vertical-align:middle; }
+    .spinner-sm-w { border-color:rgba(255,255,255,.4); border-top-color:#fff; }
+    @keyframes spin { to{transform:rotate(360deg);} }
+
+    /* MISC */
+    .info-box { background:var(--blue-light); border-left:4px solid var(--blue); padding:12px 16px; border-radius:0 var(--radius) var(--radius) 0; font-size:13px; margin-bottom:16px; }
+    .warning-box { background:#fff8e1; border-left:4px solid var(--orange); padding:12px 16px; border-radius:0 var(--radius) var(--radius) 0; font-size:13px; margin-bottom:16px; }
+    .empty-state { text-align:center; padding:48px 20px; color:var(--gray-400); }
+    .text-muted { color:var(--gray-400); font-size:13px; }
+    .divider { height:1px; background:var(--gray-100); margin:16px 0; }
+    .mt-8 { margin-top:8px; }
+    .flex-between { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:16px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">👨‍🏫</div>
+    <div class="login-title">학생 기초조사 도우미</div>
+    <div class="login-subtitle">담임 교사를 위한 기초조사 설문 및 AI 상담 질문 생성 도구</div>
+
+    <div id="client-id-warning" class="warning-box" style="display:none">
+      ⚠️ <b>CLIENT_ID</b>가 설정되지 않았습니다. 아래 설정 안내를 확인해주세요.
+    </div>
+
+    <button class="btn btn-primary" onclick="handleLogin()">
+      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.7C34.1 33.5 29.5 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l6.3-6.3C34.3 5.9 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.3-4z"/></svg>
+      Google 계정으로 시작하기
+    </button>
+    <p style="text-align:center;font-size:12px;color:var(--gray-400);margin-top:12px">AI 모델 및 API 키는 로그인 후 ⚙️ AI 설정 탭에서 구성합니다</p>
+
+    <div class="setup-info">
+      <button class="setup-toggle" onclick="toggleSetup()">
+        ⚙️ Google Cloud 최초 설정 안내
+        <span id="setup-arrow">▼</span>
+      </button>
+      <div class="setup-body" id="setup-body">
+        <ol>
+          <li><a href="https://console.cloud.google.com" target="_blank" style="color:var(--blue)">Google Cloud Console</a>에서 새 프로젝트 생성</li>
+          <li>API 라이브러리에서 <b>Google Forms API</b>, <b>Google Drive API</b> 사용 설정</li>
+          <li>OAuth 2.0 클라이언트 ID 만들기 (유형: 웹 애플리케이션)<br>
+            승인된 JavaScript 원본에 배포 URL 추가 (예: <code>http://localhost</code>)</li>
+          <li>발급된 클라이언트 ID를 이 파일 <code>const CLIENT_ID = '...'</code>에 교체</li>
+          <li>OAuth 동의 화면 → 테스트 사용자에 본인 계정 추가</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app" style="display:none">
+  <header class="app-header">
+    <div class="app-header-title">👨‍🏫 학생 기초조사 도우미</div>
+    <div class="app-header-right">
+      <span class="user-email" id="user-email"></span>
+      <button class="btn-logout" onclick="handleLogout()">로그아웃</button>
+    </div>
+  </header>
+
+  <nav class="app-tabs">
+    <button class="tab-btn active" data-tab="questions" onclick="switchTab('questions',this)">📝 질문 관리</button>
+    <button class="tab-btn" data-tab="form"      onclick="switchTab('form',this)">📋 폼 생성</button>
+    <button class="tab-btn" data-tab="responses" onclick="switchTab('responses',this)">👤 학생 응답</button>
+    <button class="tab-btn" data-tab="ai"        onclick="switchTab('ai',this)">🤖 AI 상담 질문</button>
+    <button class="tab-btn" data-tab="settings"  onclick="switchTab('settings',this)">⚙️ AI 설정</button>
+  </nav>
+
+  <main class="app-content">
+
+    <!-- TAB 1: 질문 관리 -->
+    <div id="tab-questions" class="tab-panel active">
+      <div class="card">
+        <div class="flex-between">
+          <div class="card-title" style="margin:0">📝 기초조사 질문 목록</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary btn-sm" onclick="openAddModal()">+ 질문 추가</button>
+            <button class="btn btn-outline btn-sm" onclick="resetToDefaults()">기본값으로 초기화</button>
+          </div>
+        </div>
+        <div class="info-box" style="margin-top:16px">
+          질문을 수정한 뒤 <b>폼 생성 탭</b>에서 구글 폼을 만들면 학생들이 응답할 수 있습니다.
+        </div>
+        <div style="overflow-x:auto">
+          <table class="questions-table">
+            <thead><tr>
+              <th style="width:36px">#</th><th>질문</th><th style="width:220px">선택지</th>
+              <th style="width:80px">유형</th><th style="width:56px">필수</th><th style="width:120px">관리</th>
+            </tr></thead>
+            <tbody id="questions-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 2: 폼 생성 -->
+    <div id="tab-form" class="tab-panel">
+      <div class="card">
+        <div class="card-title">📋 Google Form 생성</div>
+        <div id="form-not-created">
+          <div style="text-align:center;padding:40px 20px">
+            <div style="font-size:48px;margin-bottom:12px">📄</div>
+            <p style="color:var(--gray-600);margin-bottom:24px">질문 목록을 기반으로 학생용 구글 폼을 생성합니다.</p>
+            <button class="btn btn-primary" style="max-width:260px;margin:0 auto" onclick="handleCreateForm()">📋 Google Form 만들기</button>
+          </div>
+        </div>
+        <div id="form-created" style="display:none">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:24px;padding:16px;background:var(--green-light);border-radius:var(--radius)">
+            <span style="font-size:28px">✅</span>
+            <div><div style="font-weight:600;color:var(--green)">설문지가 생성되었습니다!</div><div class="text-muted">아래 링크를 학생들에게 공유하세요.</div></div>
+          </div>
+          <div style="margin-bottom:16px">
+            <div style="font-size:13px;font-weight:500;margin-bottom:6px">📌 학생 배포 링크</div>
+            <div class="url-box"><a id="student-url-link" href="#" target="_blank"></a><button class="copy-btn" onclick="copyUrl('student')">복사</button></div>
+          </div>
+          <div style="margin-bottom:24px">
+            <div style="font-size:13px;font-weight:500;margin-bottom:6px">🔧 교사 수정 링크</div>
+            <div class="url-box"><a id="edit-url-link" href="#" target="_blank"></a><button class="copy-btn" onclick="copyUrl('edit')">복사</button></div>
+          </div>
+          <div class="divider"></div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-outline btn-sm" onclick="handleCreateForm()">🔄 폼 새로 만들기</button>
+            <button class="btn btn-outline btn-sm" onclick="switchTab('responses',document.querySelector('[data-tab=responses]'))">👤 학생 응답 보기 →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 3: 학생 응답 -->
+    <div id="tab-responses" class="tab-panel">
+      <div class="card">
+        <div class="flex-between">
+          <div class="card-title" style="margin:0">👤 학생 응답 확인</div>
+          <button class="btn btn-outline btn-sm" onclick="loadResponses()">🔄 응답 새로고침</button>
+        </div>
+        <div id="no-form-warning" class="warning-box" style="display:none">
+          ⚠️ 먼저 <b>폼 생성 탭</b>에서 구글 폼을 만들어주세요.
+        </div>
+        <div class="student-selector">
+          <select id="student-select" class="student-select" onchange="selectStudent(this.value)">
+            <option value="">-- 학생을 선택하세요 --</option>
+          </select>
+          <span class="text-muted" id="student-count"></span>
+        </div>
+        <div id="response-display">
+          <div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📭</div><div style="font-size:15px;color:var(--gray-600)">아직 응답이 없습니다</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 4: AI 상담 질문 -->
+    <div id="tab-ai" class="tab-panel">
+      <div class="card">
+        <div class="card-title">🤖 AI 상담 질문 생성</div>
+
+        <!-- 현재 AI 모델 표시 -->
+        <div id="ai-model-status" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-50);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap">
+          <span style="font-size:13px;color:var(--gray-600)">현재 모델:</span>
+          <span id="ai-current-chip" class="model-chip">미설정</span>
+          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="switchTab('settings',document.querySelector('[data-tab=settings]'))">⚙️ 모델 변경</button>
+        </div>
+
+        <div id="ai-no-key" class="warning-box" style="display:none">
+          ⚠️ API 키가 설정되지 않았습니다.
+          <button onclick="switchTab('settings',document.querySelector('[data-tab=settings]'))" style="color:var(--blue);border:none;background:none;cursor:pointer;font-weight:500;font-size:13px">⚙️ AI 설정으로 이동</button>
+        </div>
+        <div id="ai-no-student" class="warning-box">
+          ⚠️ 먼저 <b>학생 응답 탭</b>에서 학생을 선택해주세요.
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
+          <div>
+            <div style="font-size:15px;font-weight:600" id="ai-student-name">학생 미선택</div>
+            <div class="text-muted">학생 응답을 분석하여 상담 질문을 자동 생성합니다</div>
+          </div>
+          <button class="btn btn-green" onclick="generateAIQuestions()" id="ai-btn" disabled>✨ AI 질문 생성</button>
+        </div>
+
+        <div id="ai-result-area">
+          <div class="ai-placeholder">
+            <div style="font-size:48px;margin-bottom:12px">🤖</div>
+            <div style="color:var(--gray-600);font-size:15px">AI 상담 질문이 여기에 표시됩니다</div>
+            <div class="text-muted mt-8">학생을 선택하고 "AI 질문 생성" 버튼을 클릭하세요</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TAB 5: AI 설정 -->
+    <div id="tab-settings" class="tab-panel">
+      <div class="card">
+        <div class="card-title">⚙️ AI 모델 설정</div>
+
+        <!-- 1) 제공사 선택 -->
+        <div style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:10px">1. AI 제공사 선택</div>
+        <div class="provider-cards" id="provider-cards"></div>
+
+        <!-- 2) 모델 선택 -->
+        <div style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:10px">2. 모델 선택</div>
+        <div class="model-list" id="model-list"></div>
+
+        <!-- 3) API 키 입력 -->
+        <div style="font-size:13px;font-weight:600;color:var(--gray-800);margin-bottom:10px">3. API 키 입력</div>
+        <div id="key-section">
+          <div class="key-input-wrap">
+            <input type="password" id="api-key-input" placeholder="API 키를 입력하세요" oninput="onKeyInput()" onpaste="onKeyPaste()" autocomplete="off">
+            <button class="btn btn-outline btn-sm" id="key-test-btn" onclick="testApiKey()">유효성 확인</button>
+            <span class="key-status" id="key-status-icon"></span>
+          </div>
+          <div class="key-hint" id="key-hint"></div>
+          <div class="key-msg" id="key-msg"></div>
+        </div>
+      </div>
+
+      <!-- 설정 요약 -->
+      <div class="card" id="settings-summary">
+        <div class="card-title" style="margin-bottom:12px">현재 설정 요약</div>
+        <div id="summary-content"></div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- QUESTION MODAL -->
+<div id="q-modal" class="modal-overlay" style="display:none" onclick="overlayClose(event)">
+  <div class="modal">
+    <div class="modal-title" id="q-modal-title">질문 추가</div>
+    <div class="form-group">
+      <label class="form-label">질문 내용 *</label>
+      <textarea id="q-title" rows="2" placeholder="예: 졸업 후 희망 진로나 목표를 적어주세요"></textarea>
+    </div>
+    <div class="form-group">
+      <label class="form-label">선택지 <span style="color:var(--gray-400);font-weight:normal">(객관식이면 한 줄에 하나씩, 없으면 주관식)</span></label>
+      <textarea id="q-options" rows="4" placeholder="선택지1&#10;선택지2&#10;선택지3"></textarea>
+    </div>
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="q-multi"> 복수 선택 허용 (체크박스)</label>
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px"><input type="checkbox" id="q-optional"> 선택 응답 (필수 아님)</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="closeModal()">취소</button>
+      <button class="btn btn-primary" style="width:auto" onclick="saveQuestion()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- LOADING -->
+<div id="loading" class="loading-overlay" style="display:none">
+  <div class="spinner-lg"></div>
+  <div style="color:var(--gray-600);font-size:15px" id="loading-text">처리 중...</div>
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ════════════════════════════════════════
+//  CONFIG — 발급받은 OAuth 클라이언트 ID로 교체
+// ════════════════════════════════════════
+const CLIENT_ID = '468926458908-lsnsr15rh07c0tfqu57oqv26rlgm9k4d.apps.googleusercontent.com';
+
+const SCOPES = ['https://www.googleapis.com/auth/forms.body','https://www.googleapis.com/auth/drive.file','openid','email'].join(' ');
+
+const AI_PERSONA = `너는 학생의 잠재력을 이끌어내는 데 능숙한 대한민국 고등학교의 베테랑 상담 교사다.
+학생의 응답을 통찰력 있게 분석하고, 진로·가족·학습·습관 등 주요 영역별로 깊이 있는 탐구 질문을 만들어야 한다.`;
+
+const FORM_DESC = `안녕하세요, 여러분 만나서 반갑습니다.\n\n학기 초 여러분들에 대해 잘 파악하고, 학교 생활에 도움이 되어드리고자 기초 조사서를 마련했습니다.\n\n※ 이 자료는 담임인 저 외에 그 누구에게도 공개하지 않으니 솔직하게, 자세하게, 구체적으로 작성해주세요.`;
+
+// ════════════════════════════════════════
+//  AI PROVIDERS & MODELS
+// ════════════════════════════════════════
+const PROVIDERS = {
+  openai: {
+    name: 'ChatGPT',
+    icon: '🤖',
+    sub: 'OpenAI',
+    keyStorage: 'openai_key',
+    keyPlaceholder: 'sk-proj-...',
+    keyHint: 'OpenAI Platform (platform.openai.com) → API Keys에서 발급',
+    validateKeyFormat: k => k.startsWith('sk-'),
+    models: [
+      { id:'gpt-5.4',     label:'GPT-5.4',      tier:'paid',     desc:'고성능 추론' },
+      { id:'gpt-5.4-mini',label:'GPT-5.4 mini',  tier:'paid',     desc:'빠르고 저렴' },
+      { id:'gpt-5.4-pro', label:'GPT-5.4 Pro',   tier:'paid',     desc:'최고 정확도' },
+    ]
+  },
+  claude: {
+    name: 'Claude',
+    icon: '🔶',
+    sub: 'Anthropic',
+    keyStorage: 'anthropic_key',
+    keyPlaceholder: 'sk-ant-api03-...',
+    keyHint: 'Anthropic Console (console.anthropic.com) → API Keys에서 발급',
+    validateKeyFormat: k => k.startsWith('sk-ant-'),
+    models: [
+      { id:'claude-opus-4-7',   label:'Claude Opus 4.7',   tier:'paid', desc:'최고 성능 (2026.4 최신)' },
+      { id:'claude-sonnet-4-6', label:'Claude Sonnet 4.6', tier:'paid', desc:'균형형' },
+      { id:'claude-haiku-4-5',  label:'Claude Haiku 4.5',  tier:'paid', desc:'빠르고 저렴' },
+    ]
+  },
+  gemini: {
+    name: 'Gemini',
+    icon: '💎',
+    sub: 'Google',
+    keyStorage: 'gemini_key',
+    keyPlaceholder: 'AIza...',
+    keyHint: 'Google AI Studio (aistudio.google.com) → Get API Key에서 발급',
+    validateKeyFormat: k => k.length > 10,
+    models: [
+      { id:'gemini-3.1-pro-preview', label:'Gemini 3.1 Pro',       tier:'paid',     desc:'최고 성능' },
+      { id:'gemini-3-flash-preview',  label:'Gemini 3 Flash',        tier:'freemium', desc:'무료 한도 1,500회/일' },
+      { id:'gemini-3.1-flash-lite',   label:'Gemini 3.1 Flash Lite', tier:'freemium', desc:'무료 한도 1,500회/일' },
+    ]
+  }
+};
+
+const TIER_LABEL = { paid:'💰 유료', freemium:'🆓 무료 한도', free:'🆓 무료' };
+const TIER_CLASS = { paid:'tier-paid', freemium:'tier-freemium', free:'tier-free' };
+
+const CAT_DEFS = [
+  { key:'📌 진로·입시', rx:/(진로|희망|목표|꿈|지원|대학|학과|전형|입시|수시|정시|학종|교과|논술)/ },
+  { key:'🏠 가족·환경', rx:/(가족|부모|형제|가정|보호자|식습관|취침|등교|경제|지원|수급|한부모|다문화|다자녀)/ },
+  { key:'📚 학습·공부',  rx:/(습관|공부|학습|내신|모의|성적|과목|야자|학원|목표|등급)/ },
+  { key:'💡 성격·건강',  rx:/(성격|장점|단점|특징|MBTI|mbti|스트레스|건강|취미|좋아|싫어|스마트폰|미디어)/ },
+  { key:'👥 학교생활',   rx:/(친구|임원|반장|역할|동아리|활동|어려웠|해보고|관계)/ },
+  { key:'📋 기타',       rx:/.*/ },
+];
+
+const DEFAULT_QUESTIONS = [
+  { title:'이름', options:[], multi:false, optional:false },
+  { title:'졸업 후 희망 진로나 목표를 적어주세요 (희망 직업, 희망 대학·학과 등)', options:[], multi:false, optional:false },
+  { title:'희망하는 대학 입시 전형이 있다면 무엇인가요?', options:['수시(학생부교과)','수시(학생부종합)','수시(논술)','정시(수능)','아직 모르겠다'], multi:false, optional:true },
+  { title:'가족 구성원을 간단히 소개해주세요 (부모님, 형제자매 등)', options:[], multi:false, optional:false },
+  { title:'평소 취침 시간과 기상 시간은 어떻게 되나요?', options:[], multi:false, optional:false },
+  { title:'평소 식습관에 대해 알려주세요 (아침 식사 여부, 편식 등)', options:[], multi:false, optional:true },
+  { title:'등교 방법은 무엇인가요?', options:['도보','자전거','대중교통','자가용','기타'], multi:false, optional:true },
+  { title:'하루 평균 자기 공부 시간은 얼마나 되나요?', options:['1시간 미만','1~2시간','2~3시간','3~4시간','4시간 이상'], multi:false, optional:false },
+  { title:'가장 자신 있는 과목과 어려운 과목은 무엇인가요?', options:[], multi:false, optional:false },
+  { title:'학원이나 과외를 받고 있다면 어떤 과목인지 알려주세요', options:[], multi:false, optional:true },
+  { title:'야간 자율학습(야자) 참여 여부를 알려주세요', options:['매일 참여','주 3~4일','주 1~2일','참여하지 않음'], multi:false, optional:true },
+  { title:'본인의 성격을 간단히 표현해주세요 (장점, 단점 포함)', options:[], multi:false, optional:false },
+  { title:'MBTI를 알고 있다면 적어주세요', options:[], multi:false, optional:true },
+  { title:'좋아하는 취미나 활동이 있다면 알려주세요', options:[], multi:false, optional:true },
+  { title:'스트레스를 받을 때 주로 어떻게 해소하나요?', options:[], multi:false, optional:true },
+  { title:'스마트폰 사용 시간은 하루 평균 어느 정도인가요?', options:['1시간 미만','1~2시간','2~4시간','4시간 이상'], multi:false, optional:true },
+  { title:'학교에서 참여하고 있는 동아리나 활동이 있나요?', options:[], multi:false, optional:true },
+  { title:'친구 관계에서 본인은 어떤 편인가요?', options:[], multi:false, optional:false },
+  { title:'고등학교 생활에서 가장 기대되거나 해보고 싶은 것이 있나요?', options:[], multi:false, optional:true },
+  { title:'담임 선생님에게 하고 싶은 말이나 알려주고 싶은 것이 있다면 자유롭게 적어주세요', options:[], multi:false, optional:true },
+];
+
+// ════════════════════════════════════════
+//  STATE
+// ════════════════════════════════════════
+let tokenClient=null, accessToken=null, tokenExpiry=0;
+let questions=[], formId=null, formStudentUrl=null, formEditUrl=null;
+let allResponses=[], currentStudent=null, aiMemory={};
+let editingIdx=-1;
+let aiProvider = 'openai';
+let aiModel    = 'gpt-5.4';
+let keyTestTimer = null;
+
+// ════════════════════════════════════════
+//  INIT
+// ════════════════════════════════════════
+window.onload = function () {
+  if (CLIENT_ID.includes('YOUR_GOOGLE')) document.getElementById('client-id-warning').style.display='block';
+
+  questions      = JSON.parse(localStorage.getItem('questions')||'null') || JSON.parse(JSON.stringify(DEFAULT_QUESTIONS));
+  formId         = localStorage.getItem('formId')||null;
+  formStudentUrl = localStorage.getItem('formStudentUrl')||null;
+  formEditUrl    = localStorage.getItem('formEditUrl')||null;
+  aiMemory       = JSON.parse(localStorage.getItem('aiMemory')||'{}');
+  aiProvider     = localStorage.getItem('ai_provider')||'openai';
+  aiModel        = localStorage.getItem('ai_model')||'gpt-5.4';
+
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID, scope: SCOPES,
+    callback: handleTokenResponse,
+    error_callback: e => toast('Google 로그인 실패: '+(e.message||e.type),'error'),
+  });
+
+  const st=sessionStorage.getItem('access_token'), se=parseInt(sessionStorage.getItem('token_expiry')||'0');
+  if (st && se>Date.now()) { accessToken=st; tokenExpiry=se; showApp(sessionStorage.getItem('user_email')||''); }
+};
+
+// ════════════════════════════════════════
+//  AUTH
+// ════════════════════════════════════════
+function handleLogin() {
+  if (CLIENT_ID.includes('YOUR_GOOGLE')) { toast('CLIENT_ID를 먼저 설정해주세요.','error'); return; }
+  tokenClient.requestAccessToken({ prompt:'consent' });
+}
+async function handleTokenResponse(r) {
+  if (r.error) { toast('로그인 실패: '+r.error,'error'); return; }
+  accessToken=r.access_token; tokenExpiry=Date.now()+(r.expires_in-60)*1000;
+  sessionStorage.setItem('access_token',accessToken); sessionStorage.setItem('token_expiry',String(tokenExpiry));
+  try { const i=await apiFetch('https://www.googleapis.com/oauth2/v3/userinfo'); sessionStorage.setItem('user_email',i.email); showApp(i.email); }
+  catch { showApp(''); }
+}
+function handleLogout() {
+  if (accessToken) google.accounts.oauth2.revoke(accessToken,()=>{});
+  accessToken=null; sessionStorage.clear();
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  toast('로그아웃 되었습니다.');
+}
+async function ensureToken() {
+  if (Date.now()<tokenExpiry) return;
+  await new Promise((res,rej)=>{
+    tokenClient.callback=r=>{ if(r.error){rej(new Error(r.error));return;} accessToken=r.access_token; tokenExpiry=Date.now()+(r.expires_in-60)*1000; sessionStorage.setItem('access_token',accessToken); sessionStorage.setItem('token_expiry',String(tokenExpiry)); res(); };
+    tokenClient.requestAccessToken({prompt:''});
+  });
+}
+
+// ════════════════════════════════════════
+//  GOOGLE API
+// ════════════════════════════════════════
+async function apiFetch(url,method='GET',body=null) {
+  await ensureToken();
+  const opts={method,headers:{Authorization:`Bearer ${accessToken}`}};
+  if (body!==null){opts.headers['Content-Type']='application/json';opts.body=JSON.stringify(body);}
+  const res=await fetch(url,opts);
+  if (res.status===204) return {};
+  const data=await res.json();
+  if (!res.ok) throw new Error(data.error?.message||`HTTP ${res.status}`);
+  return data;
+}
+
+// ════════════════════════════════════════
+//  UI
+// ════════════════════════════════════════
+function showApp(email) {
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='flex';
+  document.getElementById('user-email').textContent=email;
+  renderQuestions(); updateFormPanel(); renderSettingsTab(); updateAIPanel();
+}
+function switchTab(id,btn) {
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  if (btn) btn.classList.add('active');
+  if (id==='responses') loadResponses();
+  if (id==='ai') updateAIPanel();
+  if (id==='settings') renderSettingsTab();
+}
+function toggleSetup() {
+  const b=document.getElementById('setup-body'); b.classList.toggle('open');
+  document.getElementById('setup-arrow').textContent=b.classList.contains('open')?'▲':'▼';
+}
+function toast(msg,type='') {
+  const t=document.getElementById('toast'); t.textContent=msg; t.className=['show',type].filter(Boolean).join(' ');
+  clearTimeout(t._t); t._t=setTimeout(()=>{t.className='';},3200);
+}
+function showLoading(text){document.getElementById('loading-text').textContent=text||'처리 중...';document.getElementById('loading').style.display='flex';}
+function hideLoading(){document.getElementById('loading').style.display='none';}
+function overlayClose(e){if(e.target===e.currentTarget)closeModal();}
+function closeModal(){document.getElementById('q-modal').style.display='none';}
+function copyUrl(type){const url=type==='student'?formStudentUrl:formEditUrl;if(url)navigator.clipboard.writeText(url).then(()=>toast('URL이 복사되었습니다!','success'));}
+function esc(s){return String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function nl2br(s){return esc(s).replace(/\n/g,'<br>');}
+
+// ════════════════════════════════════════
+//  QUESTIONS
+// ════════════════════════════════════════
+function saveQs(){localStorage.setItem('questions',JSON.stringify(questions));}
+function renderQuestions() {
+  const tb=document.getElementById('questions-tbody'); if(!tb)return;
+  if(!questions.length){tb.innerHTML=`<tr><td colspan="6" style="text-align:center;padding:32px;color:var(--gray-400)">질문이 없습니다.</td></tr>`;return;}
+  tb.innerHTML=questions.map((q,i)=>`<tr>
+    <td style="text-align:center;color:var(--gray-400);font-size:12px">${i+1}</td>
+    <td style="max-width:300px">${esc(q.title)}</td>
+    <td style="font-size:12px">${q.options.length?q.options.slice(0,3).map(o=>`<span class="badge badge-gray">${esc(o)}</span>`).join(' ')+(q.options.length>3?`<span class="text-muted"> +${q.options.length-3}</span>`:''):'<span class="text-muted">주관식</span>'}</td>
+    <td>${q.options.length?`<span class="badge ${q.multi?'badge-orange':'badge-blue'}">${q.multi?'복수선택':'단일선택'}</span>`:'<span class="badge badge-gray">서술형</span>'}</td>
+    <td style="text-align:center">${q.optional?'<span class="badge badge-gray">선택</span>':'<span class="badge badge-blue">필수</span>'}</td>
+    <td><div class="action-btns">
+      <button class="btn btn-outline btn-sm" onclick="openEditModal(${i})">✏️</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteQ(${i})">🗑️</button>
+      ${i>0?`<button class="btn btn-outline btn-sm" onclick="moveQ(${i},-1)">↑</button>`:''}
+      ${i<questions.length-1?`<button class="btn btn-outline btn-sm" onclick="moveQ(${i},1)">↓</button>`:''}
+    </div></td></tr>`).join('');
+}
+function openAddModal(){editingIdx=-1;document.getElementById('q-modal-title').textContent='질문 추가';['q-title','q-options'].forEach(id=>document.getElementById(id).value='');['q-multi','q-optional'].forEach(id=>document.getElementById(id).checked=false);document.getElementById('q-modal').style.display='flex';setTimeout(()=>document.getElementById('q-title').focus(),50);}
+function openEditModal(i){editingIdx=i;const q=questions[i];document.getElementById('q-modal-title').textContent='질문 수정';document.getElementById('q-title').value=q.title;document.getElementById('q-options').value=q.options.join('\n');document.getElementById('q-multi').checked=q.multi;document.getElementById('q-optional').checked=q.optional;document.getElementById('q-modal').style.display='flex';}
+function saveQuestion(){const title=document.getElementById('q-title').value.trim();if(!title){toast('질문 내용을 입력해주세요.','error');return;}const options=document.getElementById('q-options').value.split('\n').map(s=>s.trim()).filter(Boolean);const multi=document.getElementById('q-multi').checked;const optional=document.getElementById('q-optional').checked;const q={title,options,multi,optional};if(editingIdx===-1)questions.push(q);else questions[editingIdx]=q;saveQs();renderQuestions();closeModal();toast(editingIdx===-1?'질문이 추가되었습니다.':'질문이 수정되었습니다.','success');}
+function deleteQ(i){if(!confirm(`"${questions[i].title}" 질문을 삭제하시겠습니까?`))return;questions.splice(i,1);saveQs();renderQuestions();toast('삭제되었습니다.');}
+function moveQ(i,dir){const j=i+dir;if(j<0||j>=questions.length)return;[questions[i],questions[j]]=[questions[j],questions[i]];saveQs();renderQuestions();}
+function resetToDefaults(){if(!confirm('질문 목록을 기본값으로 초기화하시겠습니까?'))return;questions=JSON.parse(JSON.stringify(DEFAULT_QUESTIONS));saveQs();renderQuestions();toast('기본값으로 초기화되었습니다.','success');}
+
+// ════════════════════════════════════════
+//  FORM CREATION
+// ════════════════════════════════════════
+async function handleCreateForm() {
+  if(!questions.length){toast('먼저 질문을 추가해주세요.','error');return;}
+  if(formId&&!confirm('이미 생성된 폼이 있습니다.\n새로 만들까요?'))return;
+  showLoading(`${questions.length}개 질문으로 Google Form 생성 중...`);
+  try {
+    const form=await apiFetch('https://forms.googleapis.com/v1/forms','POST',{info:{title:'학생 기초조사',documentTitle:'학생 기초조사'}});
+    const fId=form.formId;
+    const requests=[{updateFormInfo:{info:{description:FORM_DESC},updateMask:'description'}}];
+    questions.forEach(q=>{let content;if(q.options&&q.options.length){content={choiceQuestion:{type:q.multi?'CHECKBOX':'RADIO',options:q.options.map(v=>({value:v})),shuffle:false}};}else{content={textQuestion:{paragraph:true}};}requests.push({createItem:{item:{title:q.title,questionItem:{question:{required:!q.optional,...content}}}}});});
+    await apiFetch(`https://forms.googleapis.com/v1/forms/${fId}:batchUpdate`,'POST',{requests});
+    formId=fId; formStudentUrl=`https://docs.google.com/forms/d/${fId}/viewform`; formEditUrl=`https://docs.google.com/forms/d/${fId}/edit`;
+    localStorage.setItem('formId',formId); localStorage.setItem('formStudentUrl',formStudentUrl); localStorage.setItem('formEditUrl',formEditUrl);
+    updateFormPanel(); toast(`✅ 폼이 생성되었습니다! (${questions.length}개 질문)`,'success');
+  } catch(e){console.error(e);toast('폼 생성 실패: '+e.message,'error');}
+  finally{hideLoading();}
+}
+function updateFormPanel() {
+  if(formId&&formStudentUrl){document.getElementById('form-not-created').style.display='none';document.getElementById('form-created').style.display='block';document.getElementById('student-url-link').href=formStudentUrl;document.getElementById('student-url-link').textContent=formStudentUrl;document.getElementById('edit-url-link').href=formEditUrl;document.getElementById('edit-url-link').textContent=formEditUrl;}
+  else{document.getElementById('form-not-created').style.display='block';document.getElementById('form-created').style.display='none';}
+}
+
+// ════════════════════════════════════════
+//  RESPONSES
+// ════════════════════════════════════════
+async function loadResponses() {
+  if(!formId){document.getElementById('no-form-warning').style.display='block';return;}
+  document.getElementById('no-form-warning').style.display='none';
+  showLoading('학생 응답 불러오는 중...');
+  try {
+    const formData=await apiFetch(`https://forms.googleapis.com/v1/forms/${formId}`);
+    const qMap={};(formData.items||[]).forEach(item=>{const qId=item.questionItem?.question?.questionId;if(qId)qMap[qId]=item.title;});
+    const data=await apiFetch(`https://forms.googleapis.com/v1/forms/${formId}/responses`);
+    allResponses=(data.responses||[]).map(r=>{const obj={};for(const [qId,ans] of Object.entries(r.answers||{})){obj[qMap[qId]||qId]=(ans.textAnswers?.answers||[]).map(a=>a.value).join(', ');}return obj;});
+    allResponses.sort((a,b)=>(getName(a)||'').localeCompare(getName(b)||'','ko'));
+    populateDropdown(); toast(`${allResponses.length}명의 응답을 불러왔습니다.`,'success');
+  } catch(e){console.error(e);toast('응답 불러오기 실패: '+e.message,'error');}
+  finally{hideLoading();}
+}
+function getName(r){return Object.entries(r).find(([k])=>/이름/.test(k))?.[1]||null;}
+function populateDropdown() {
+  const sel=document.getElementById('student-select');
+  sel.innerHTML='<option value="">-- 학생을 선택하세요 --</option>';
+  allResponses.forEach((r,i)=>sel.insertAdjacentHTML('beforeend',`<option value="${i}">${esc(getName(r)||`학생 ${i+1}`)}</option>`));
+  document.getElementById('student-count').textContent=allResponses.length?`총 ${allResponses.length}명`:'';
+  if(!allResponses.length) document.getElementById('response-display').innerHTML=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📭</div><div style="font-size:15px;color:var(--gray-600)">아직 응답이 없습니다</div></div>`;
+}
+function selectStudent(idx) {
+  currentStudent=idx===''?null:allResponses[parseInt(idx)]||null;
+  if(currentStudent)renderResponse(currentStudent);
+  updateAIPanel();
+}
+function renderResponse(r) {
+  const name=getName(r)||'학생';
+  const filtered=Object.entries(r).filter(([k])=>!/이름/.test(k)&&!/(timestamp|응답\s*시간|제출\s*시각|타임)/i.test(k));
+  const cats={};CAT_DEFS.forEach(c=>{cats[c.key]=[];});
+  filtered.forEach(([q,a])=>{for(const{key,rx}of CAT_DEFS){if(rx.test(q)){cats[key].push([q,a]);return;}}});
+  let html=`<div style="margin-bottom:12px;font-weight:600;font-size:15px;color:var(--blue)">👤 ${esc(name)} 학생의 응답</div><div class="response-grid">`;
+  CAT_DEFS.forEach(({key})=>{const qa=cats[key];if(!qa?.length)return;html+=`<div class="category-card"><div class="category-header">${key}</div>`;qa.forEach(([q,a])=>{html+=`<div class="qa-item"><div class="qa-question">${esc(q)}</div><div class="qa-answer">${a?nl2br(a):'<span style="color:var(--gray-400)">응답 없음</span>'}</div></div>`;});html+='</div>';});
+  html+='</div>';
+  document.getElementById('response-display').innerHTML=html;
+}
+
+// ════════════════════════════════════════
+//  AI SETTINGS TAB
+// ════════════════════════════════════════
+function renderSettingsTab() {
+  // 제공사 카드
+  const pc=document.getElementById('provider-cards');
+  pc.innerHTML=Object.entries(PROVIDERS).map(([id,p])=>`
+    <div class="provider-card ${aiProvider===id?'selected':''}" onclick="selectProvider('${id}')">
+      <div class="p-icon">${p.icon}</div>
+      <div class="p-name">${p.name}</div>
+      <div class="p-sub">${p.sub}</div>
+    </div>`).join('');
+
+  // 모델 목록
+  renderModelList();
+
+  // API 키 입력창
+  const p=PROVIDERS[aiProvider];
+  const savedKey=localStorage.getItem(p.keyStorage)||'';
+  const input=document.getElementById('api-key-input');
+  input.value=savedKey;
+  input.placeholder=p.keyPlaceholder;
+  document.getElementById('key-hint').textContent='📌 '+p.keyHint;
+
+  // 키 상태 초기화
+  if(savedKey) {
+    const fmt=p.validateKeyFormat(savedKey);
+    setKeyUI(fmt?'format-ok':'bad', fmt?null:'키 형식이 맞지 않습니다');
+  } else {
+    setKeyUI('empty');
+  }
+
+  renderSummary();
+}
+
+function renderModelList() {
+  const p=PROVIDERS[aiProvider];
+  document.getElementById('model-list').innerHTML=p.models.map(m=>`
+    <div class="model-item ${aiModel===m.id?'selected':''}" onclick="selectModel('${m.id}')">
+      <input type="radio" name="model" ${aiModel===m.id?'checked':''} onchange="selectModel('${m.id}')">
+      <div class="model-info">
+        <div class="model-name">${m.label}</div>
+        <div class="model-desc">${m.desc}</div>
+      </div>
+      <span class="${TIER_CLASS[m.tier]}">${TIER_LABEL[m.tier]}</span>
+    </div>`).join('');
+}
+
+function selectProvider(id) {
+  aiProvider=id;
+  // 해당 제공사의 첫 모델로 자동 설정
+  aiModel=PROVIDERS[id].models[0].id;
+  localStorage.setItem('ai_provider',aiProvider);
+  localStorage.setItem('ai_model',aiModel);
+  renderSettingsTab();
+  updateAIPanel();
+}
+
+function selectModel(id) {
+  aiModel=id;
+  localStorage.setItem('ai_model',aiModel);
+  renderModelList();
+  renderSummary();
+  updateAIPanel();
+}
+
+function renderSummary() {
+  const p=PROVIDERS[aiProvider];
+  const m=p.models.find(x=>x.id===aiModel)||p.models[0];
+  const key=localStorage.getItem(p.keyStorage)||'';
+  const hasKey=key&&p.validateKeyFormat(key);
+  document.getElementById('summary-content').innerHTML=`
+    <div style="display:grid;grid-template-columns:120px 1fr;gap:10px 16px;font-size:13px">
+      <span style="color:var(--gray-600)">제공사</span><span>${p.icon} ${p.name} (${p.sub})</span>
+      <span style="color:var(--gray-600)">모델</span><span style="font-weight:500">${m.label} <span class="${TIER_CLASS[m.tier]}">${TIER_LABEL[m.tier]}</span></span>
+      <span style="color:var(--gray-600)">API 키</span><span>${hasKey?'<span style="color:#2e7d32">✅ 설정됨 (끝 4자리: ...'+key.slice(-4)+')</span>':'<span style="color:var(--red)">❌ 미설정</span>'}</span>
+    </div>`;
+}
+
+// ════════════════════════════════════════
+//  API KEY VALIDATION
+// ════════════════════════════════════════
+function setKeyUI(state, msg=null) {
+  const icon=document.getElementById('key-status-icon');
+  const msgEl=document.getElementById('key-msg');
+  const input=document.getElementById('api-key-input');
+  input.className=''; msgEl.className='key-msg'; msgEl.textContent=''; icon.textContent='';
+  if(state==='empty'){return;}
+  if(state==='format-ok'){icon.textContent=''; msgEl.textContent=''; }
+  if(state==='checking'){icon.innerHTML='<span class="spinner-sm"></span>'; msgEl.textContent='확인 중...'; msgEl.className='key-msg checking';}
+  if(state==='valid'){icon.textContent='✅'; input.className='key-ok'; msgEl.textContent='유효한 키입니다'; msgEl.className='key-msg ok';}
+  if(state==='invalid'){icon.textContent='❌'; input.className='key-bad'; msgEl.textContent='유효하지 않은 키입니다'; msgEl.className='key-msg bad';}
+  if(state==='bad'){icon.textContent='⚠️'; input.className='key-bad'; msgEl.textContent=msg||'형식이 올바르지 않습니다'; msgEl.className='key-msg bad';}
+  if(state==='error'){icon.textContent='⚠️'; msgEl.textContent='연결 오류 - 네트워크를 확인해주세요'; msgEl.className='key-msg bad';}
+}
+
+function onKeyInput() {
+  const key=document.getElementById('api-key-input').value.trim();
+  const p=PROVIDERS[aiProvider];
+  clearTimeout(keyTestTimer);
+  if(!key){setKeyUI('empty');return;}
+  if(!p.validateKeyFormat(key)){setKeyUI('bad','키 형식이 올바르지 않습니다 ('+p.keyPlaceholder+')');return;}
+  setKeyUI('format-ok');
+}
+
+function onKeyPaste() {
+  // 붙여넣기 후 자동 유효성 확인
+  clearTimeout(keyTestTimer);
+  keyTestTimer=setTimeout(()=>testApiKey(),600);
+}
+
+async function testApiKey() {
+  const key=document.getElementById('api-key-input').value.trim();
+  const p=PROVIDERS[aiProvider];
+  if(!key){setKeyUI('empty');return;}
+  if(!p.validateKeyFormat(key)){setKeyUI('bad','키 형식이 올바르지 않습니다 ('+p.keyPlaceholder+')');return;}
+
+  setKeyUI('checking');
+  document.getElementById('key-test-btn').disabled=true;
+
+  try {
+    let ok=false;
+    if(aiProvider==='openai') {
+      const r=await fetch('https://api.openai.com/v1/models',{headers:{Authorization:`Bearer ${key}`}});
+      ok=r.ok;
+    } else if(aiProvider==='claude') {
+      const r=await fetch('https://api.anthropic.com/v1/messages',{
+        method:'POST',
+        headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+        body:JSON.stringify({model:'claude-haiku-4-5',max_tokens:1,messages:[{role:'user',content:'hi'}]})
+      });
+      ok=r.status!==401&&r.status!==403;
+    } else if(aiProvider==='gemini') {
+      const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${key}&pageSize=1`);
+      ok=r.ok;
+    }
+    setKeyUI(ok?'valid':'invalid');
+    if(ok) {
+      localStorage.setItem(p.keyStorage,key);
+      renderSummary();
+      updateAIPanel();
+      toast('✅ API 키가 저장되었습니다.','success');
+    }
+  } catch(e) { setKeyUI('error'); }
+  finally { document.getElementById('key-test-btn').disabled=false; }
+}
+
+// ════════════════════════════════════════
+//  AI TAB
+// ════════════════════════════════════════
+function updateAIPanel() {
+  const p=PROVIDERS[aiProvider];
+  const m=p?.models.find(x=>x.id===aiModel)||p?.models[0];
+  const key=localStorage.getItem(p?.keyStorage||'');
+  const hasKey=key&&p?.validateKeyFormat(key);
+  const name=currentStudent?(getName(currentStudent)||'학생'):null;
+
+  // 현재 모델 칩
+  const chip=document.getElementById('ai-current-chip');
+  if(m){chip.innerHTML=`${p.icon} ${m.label} <span class="${TIER_CLASS[m.tier]}" style="margin-left:4px">${TIER_LABEL[m.tier]}</span>`;}
+
+  document.getElementById('ai-no-key').style.display=hasKey?'none':'block';
+  document.getElementById('ai-no-student').style.display=name?'none':'block';
+  document.getElementById('ai-btn').disabled=!name||!hasKey;
+  document.getElementById('ai-student-name').textContent=name?`${name} 학생`:'학생 미선택';
+
+  if(name&&aiMemory[name]){
+    document.getElementById('ai-result-area').innerHTML=`
+      <div class="ai-result">${esc(aiMemory[name])}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <span class="text-muted" style="align-self:center">이전에 생성된 질문</span>
+        <button class="btn btn-outline btn-sm" onclick="copyAI()">📋 복사</button>
+      </div>`;
+  }
+}
+
+// ════════════════════════════════════════
+//  AI GENERATION
+// ════════════════════════════════════════
+async function generateAIQuestions() {
+  const p=PROVIDERS[aiProvider];
+  const key=localStorage.getItem(p.keyStorage)||'';
+  if(!key||!p.validateKeyFormat(key)){toast('API 키를 먼저 설정해주세요.','error');return;}
+  if(!currentStudent){toast('먼저 학생을 선택해주세요.','error');return;}
+
+  const name=getName(currentStudent)||'학생';
+  const filtered=Object.entries(currentStudent).filter(([k])=>!/이름/.test(k)&&!/(timestamp|응답\s*시간|제출\s*시각|타임)/i.test(k));
+  if(!filtered.length){toast('응답 내용이 없습니다.','error');return;}
+
+  const responseText=filtered.map(([q,a])=>`- ${q}: ${a}`).join('\n');
+  const prompt=`${AI_PERSONA}\n\n아래는 '${name}' 학생의 기초조사 응답 내용입니다.\n\n[학생 응답 내용]\n${responseText}\n\n[요청]\n이 학생의 응답을 분석하여 상담 시 유용한 질문을 생성하라.\n- 중요도에 따라 우선순위가 높은 질문을 먼저 제시하고, 최소 10개에서 최대 30개 사이로 생성하라(번호 목록 형태).\n- 질문은 진로, 가족, 학습, 습관, 성격 등 주요 영역을 균형 있게 포함하라.\n- 각 질문은 학생의 응답에서 근거해야 하며, 개방형 질문으로 만들어라.\n- 출력은 번호가 붙은 질문 목록만 제시하고 다른 설명은 생략하라.`;
+
+  const btn=document.getElementById('ai-btn');
+  btn.disabled=true; btn.innerHTML='<span class="spinner-sm spinner-sm-w"></span> 생성 중...';
+  document.getElementById('ai-result-area').innerHTML=`<div style="text-align:center;padding:40px;color:var(--gray-400)"><div class="spinner-lg" style="margin:0 auto 16px"></div><div>${esc(name)} 학생 분석 중… 잠시만 기다려주세요.</div></div>`;
+
+  try {
+    let raw='';
+    if(aiProvider==='openai')       raw=await callOpenAI(prompt,aiModel,key);
+    else if(aiProvider==='claude')  raw=await callClaude(prompt,aiModel,key);
+    else if(aiProvider==='gemini')  raw=await callGemini(prompt,aiModel,key);
+
+    if(!raw) throw new Error('AI 응답이 비어 있습니다.');
+
+    let items=raw.split(/\n+/).map(s=>s.trim()).filter(s=>/^\d+[\).\-\s]/.test(s)).map(s=>s.replace(/^\d+[\).\-\s]*/,'').trim()).filter(Boolean);
+    if(items.length<5) items=raw.split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    items=items.slice(0,30);
+    const finalText=items.map((q,i)=>`${i+1}. ${q}`).join('\n');
+
+    aiMemory[name]=finalText; localStorage.setItem('aiMemory',JSON.stringify(aiMemory));
+    document.getElementById('ai-result-area').innerHTML=`
+      <div class="ai-result">${esc(finalText)}</div>
+      <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
+        <button class="btn btn-outline btn-sm" onclick="copyAI()">📋 복사</button>
+      </div>`;
+    toast(`✅ ${items.length}개 상담 질문이 생성되었습니다!`,'success');
+  } catch(e) {
+    console.error(e);
+    document.getElementById('ai-result-area').innerHTML=`<div style="color:var(--red);padding:20px;text-align:center">❌ AI 질문 생성 실패: ${esc(e.message)}</div>`;
+    toast('AI 생성 실패: '+e.message,'error');
+  } finally {
+    btn.disabled=false; btn.innerHTML='✨ AI 질문 생성';
+  }
+}
+
+// ── OpenAI ──
+async function callOpenAI(prompt,model,key) {
+  const r=await fetch('https://api.openai.com/v1/chat/completions',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','Authorization':`Bearer ${key}`},
+    body:JSON.stringify({model,messages:[{role:'user',content:prompt}],temperature:0.7,max_tokens:1500})
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+  const d=await r.json(); return d.choices?.[0]?.message?.content?.trim()||'';
+}
+
+// ── Claude (Anthropic) ──
+async function callClaude(prompt,model,key) {
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{'Content-Type':'application/json','x-api-key':key,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+    body:JSON.stringify({model,max_tokens:1500,messages:[{role:'user',content:prompt}]})
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+  const d=await r.json(); return d.content?.[0]?.text?.trim()||'';
+}
+
+// ── Gemini ──
+async function callGemini(prompt,model,key) {
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`,{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{parts:[{text:prompt}]}],generationConfig:{maxOutputTokens:1500}})
+  });
+  if(!r.ok){const e=await r.json().catch(()=>({}));throw new Error(e.error?.message||`HTTP ${r.status}`);}
+  const d=await r.json(); return d.candidates?.[0]?.content?.parts?.[0]?.text?.trim()||'';
+}
+
+function copyAI() {
+  const name=currentStudent?(getName(currentStudent)||''):'';
+  const text=aiMemory[name];
+  if(text)navigator.clipboard.writeText(text).then(()=>toast('복사되었습니다!','success'));
+}
+</script>
+</body>
+</html>
