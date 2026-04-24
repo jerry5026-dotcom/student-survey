@@ -394,7 +394,7 @@
           <button onclick="switchTab('settings',document.querySelector('[data-tab=settings]'))" style="color:var(--blue);border:none;background:none;cursor:pointer;font-weight:500;font-size:13px">⚙️ AI 설정으로 이동</button>
         </div>
         <div id="ai-no-student" class="warning-box">
-          ⚠️ 먼저 <b>학생 응답 탭</b>에서 학생을 선택해주세요.
+          ⚠️ <b>학생 선택 드롭다운</b>에서 학생을 고른 뒤 <b>✨ 선택 학생 생성</b>을 눌러주세요. (또는 <b>👥 전체 학생 일괄 생성</b>)
         </div>
 
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px">
@@ -402,7 +402,12 @@
             <div style="font-size:15px;font-weight:600" id="ai-student-name">학생 미선택</div>
             <div class="text-muted">학생 응답을 분석하여 상담 질문을 자동 생성합니다</div>
           </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+            <select id="ai-student-select" onchange="selectStudentFromAI(this.value)"
+              style="min-width:180px;padding:9px 12px;border:2px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none;cursor:pointer;background:#fff;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+              <option value="">-- 학생 선택 --</option>
+            </select>
             <button class="btn btn-green" onclick="generateAIQuestions()" id="ai-btn" disabled>✨ 선택 학생 생성</button>
             <button class="btn btn-outline" onclick="generateAllAI()" id="ai-btn-all" disabled>👥 전체 학생 일괄 생성</button>
             <button class="btn btn-green btn-sm" onclick="downloadExcelWithAI()" id="ai-excel-btn" style="display:none">📊 엑셀 다운로드 (AI 포함)</button>
@@ -534,16 +539,17 @@
       <ol>
         <li>먼저 <b>⚙️ AI 설정</b> 탭에서 사용할 AI(OpenAI/Claude/Gemini) 모델과 API 키를 설정합니다.</li>
         <li><b>Gemini 3 Flash / Flash Lite</b>는 무료(1,500회/일)로 사용할 수 있어 입문자에게 권장합니다.</li>
-        <li><b>✨ 선택 학생 생성</b> — 학생 응답 탭에서 선택한 학생에 대해 개별 질문 생성. 녹색 박스 상단에 <b>학생 이름</b>이 표시됩니다.</li>
+        <li><b>✨ 선택 학생 생성</b> — AI 탭의 <b>학생 선택 드롭다운</b>(버튼 옆)에서 학생을 직접 고른 뒤 생성합니다. 학생 응답 탭의 선택과도 자동으로 연동됩니다. 녹색 박스 상단에 <b>학생 이름</b>이 표시됩니다.</li>
         <li><b>👥 전체 학생 일괄 생성</b> — 응답한 모든 학생에 대해 차례로 AI 질문 생성 (실패 건은 건너뜀).
           <ul>
             <li>완료 후 학생별 <b>아코디언 목록</b>이 표시됩니다. 학생 이름을 클릭해 열고 닫을 수 있습니다.</li>
             <li><b>📖 모두 펼치기 / 📕 모두 접기</b> 버튼으로 일괄 제어</li>
           </ul>
         </li>
-        <li><b>📊 엑셀 다운로드 (AI 포함)</b> — 기존 학생 응답 엑셀 양식에 <b>D5 셀부터 해당 학생의 AI 질문</b>이 함께 담긴 파일을 받습니다.
+        <li><b>📊 엑셀 다운로드 (AI 포함)</b> — 기존 학생 응답 엑셀 양식에 <b>D열에 해당 학생의 AI 질문</b>이 함께 담긴 파일을 받습니다.
           <ul>
-            <li>학생조회 시트 B3에 이름을 입력하면 D열에 AI 질문이 자동 표시됩니다.</li>
+            <li>학생조회 시트 B3에 이름을 입력하면 D열(D5 타이틀, D6부터 질문 순서대로)에 AI 질문이 자동 표시됩니다.</li>
+            <li>D열 너비는 120으로 고정, 긴 질문은 자동 줄바꿈되며 행 높이도 함께 조절됩니다.</li>
             <li>파일명: <code>학생기초조사_AI상담질문포함_YYYYMMDD.xlsx</code></li>
           </ul>
         </li>
@@ -954,12 +960,19 @@ function populateDropdown() {
   const excelBtn=document.getElementById('excel-btn');
   if(excelBtn) excelBtn.style.display=allResponses.length?'inline-flex':'none';
   if(!allResponses.length) document.getElementById('response-display').innerHTML=`<div class="empty-state"><div style="font-size:40px;margin-bottom:12px">📭</div><div style="font-size:15px;color:var(--gray-600)">아직 응답이 없습니다</div></div>`;
+  // AI 탭 드롭다운·버튼 상태 동기화
+  updateAIPanel();
 }
 function selectStudent(idx) {
   currentStudent=idx===''?null:allResponses[parseInt(idx)]||null;
   if(currentStudent)renderResponse(currentStudent);
+  // 학생 응답 탭 드롭다운 동기화
+  const mainSel=document.getElementById('student-select');
+  if(mainSel&&mainSel.value!==String(idx??'')) mainSel.value=idx??'';
   updateAIPanel();
 }
+// AI 탭 드롭다운에서 선택 시
+function selectStudentFromAI(idx){ selectStudent(idx); }
 function renderResponse(r) {
   const name=getName(r)||'학생';
   const filtered=Object.entries(r).filter(([k])=>!/이름/.test(k)&&!/(timestamp|응답\s*시간|제출\s*시각|타임)/i.test(k));
@@ -1156,6 +1169,20 @@ function updateAIPanel() {
     sel.innerHTML=opts;
     document.getElementById('ai-no-key-inline').style.display=anyKey?'none':'block';
     document.getElementById('ai-no-key').style.display='none'; // 인라인 메시지로 대체
+  }
+
+  // ── AI 탭 학생 선택 드롭다운 동기화 ──
+  const aiSel=document.getElementById('ai-student-select');
+  if(aiSel){
+    const curIdx=currentStudent?allResponses.indexOf(currentStudent):-1;
+    if(allResponses.length){
+      aiSel.disabled=false;
+      aiSel.innerHTML='<option value="">-- 학생 선택 --</option>'+
+        allResponses.map((r,i)=>`<option value="${i}" ${i===curIdx?'selected':''}>${esc(getName(r)||`학생 ${i+1}`)}</option>`).join('');
+    } else {
+      aiSel.disabled=true;
+      aiSel.innerHTML='<option value="">-- 학생 응답 먼저 불러오기 --</option>';
+    }
   }
 
   document.getElementById('ai-no-student').style.display=name?'none':'block';
@@ -1606,8 +1633,8 @@ async function downloadExcel(includeAI=false) {
   const ws1=wb.addWorksheet('학생조회',{properties:{tabColor:{argb:'FF1A73E8'}}});
   ws1.getColumn('A').width=36;
   ws1.getColumn('B').width=54;
-  ws1.getColumn('C').width=3;  // 구분 여백
-  ws1.getColumn('D').width=64; // AI 상담 질문 영역
+  ws1.getColumn('C').width=3;   // 구분 여백
+  ws1.getColumn('D').width=120; // AI 상담 질문 영역 (고정 120)
 
   // 타이틀
   ws1.mergeCells('A1:B1');
@@ -1688,22 +1715,24 @@ async function downloadExcel(includeAI=false) {
   }
 
   // ── D열: AI 상담 질문 (학생 이름 입력 시 자동 표시) ──
+  // 타이틀은 D5, 질문은 D6부터 시작
   if(maxAI>0){
-    // D4 타이틀
-    Object.assign(ws1.getCell('D4'),{
+    // D5 타이틀
+    Object.assign(ws1.getCell('D5'),{
       value:'🤖 AI 상담 질문 (검색한 학생의 생성 질문)',
       font:{bold:true,size:12,color:{argb:'FFFFFFFF'}},
       fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF7C3AED'}},
       alignment:{vertical:'middle',horizontal:'left',indent:1},
       border:{bottom:{style:'thin',color:{argb:'FFDDDDDD'}}},
     });
-    ws1.getRow(4).height=28;
+    // D5 행 높이는 기존 A/B 셀 기준 값과 비교해 더 큰 값 사용
+    ws1.getRow(5).height=Math.max(ws1.getRow(5).height||0,28);
 
-    // D5부터 AI 질문 수식 (학생 이름 미입력 시 빈칸)
+    // D6부터 AI 질문 수식 (학생 이름 미입력 시 빈칸)
     for(let i=0;i<maxAI;i++){
       const aiColNum=fullHdr.indexOf(`AI_Q${i+1}`)+1;
       const aiColLetter=col(aiColNum);
-      const rr=5+i;
+      const rr=6+i;
       Object.assign(ws1.getCell(`D${rr}`),{
         value:{formula:`IF($B$3="","",IFERROR(INDEX('전체응답'!${aiColLetter}:${aiColLetter},MATCH($B$3,'전체응답'!${nameColLetter}:${nameColLetter},0)),""))`},
         font:{size:11,color:{argb:'FF1F2937'}},
@@ -1711,9 +1740,18 @@ async function downloadExcel(includeAI=false) {
         alignment:{vertical:'middle',wrapText:true,indent:1},
         border:{bottom:{style:'hair',color:{argb:'FFE5E7EB'}},left:{style:'thin',color:{argb:'FFDDD6FE'}}},
       });
-      // D열 행 높이는 기존 행 높이와 충돌하지 않도록 max 로 보존 (이미 A/B 셀 기준으로 설정됨)
+      // 행 높이 동적 계산: 해당 질문 번호(i+1)에 대해 모든 학생의 AI 질문 중 최대 길이 기준
+      // 120자 초과 시 줄 수를 늘려 높이 반영 (한 줄 기본 22, 추가 줄당 18)
+      let maxLen=0;
+      allResponses.forEach(r=>{
+        const nm=getName(r)||'';
+        const t=aiMap[nm]?.[i]||'';
+        if(t.length>maxLen) maxLen=t.length;
+      });
+      const lines=Math.max(1,Math.ceil(maxLen/120));
+      const aiRowH=Math.max(22,lines*22);
       const existing=ws1.getRow(rr).height||0;
-      ws1.getRow(rr).height=Math.max(existing,40);
+      ws1.getRow(rr).height=Math.max(existing,aiRowH);
     }
   }
 
