@@ -248,7 +248,11 @@
       <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#fff" d="M44.5 20H24v8.5h11.7C34.1 33.5 29.5 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3 0 5.7 1.1 7.8 2.9l6.3-6.3C34.3 5.9 29.4 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20c11 0 19.7-8 19.7-20 0-1.3-.1-2.7-.3-4z"/></svg>
       Google 계정으로 시작하기
     </button>
-    <p style="text-align:center;font-size:12px;color:var(--gray-400);margin-top:12px">AI 모델 및 API 키는 로그인 후 ⚙️ AI 설정 탭에서 구성합니다</p>
+    <div style="display:flex;align-items:center;justify-content:center;gap:14px;margin-top:12px;font-size:12px;color:var(--gray-400)">
+      <button type="button" onclick="openHelpModal()" style="background:none;border:none;color:var(--blue);cursor:pointer;font-size:12px;font-weight:500;text-decoration:underline;padding:0">📖 사용법 먼저 보기</button>
+      <span style="color:var(--gray-200)">|</span>
+      <span>AI 모델 및 API 키는 로그인 후 ⚙️ AI 설정 탭에서 구성</span>
+    </div>
 
     <!-- 일반 사용자 안내 (기본 펼침) -->
     <div class="setup-info">
@@ -537,15 +541,39 @@
     <div class="modal-title">📖 사용 방법 안내</div>
 
     <div class="help-section">
-      <h3>🚀 1. 시작하기</h3>
+      <h3>🚀 1. 시작하기 전에 — 사용 요청</h3>
+      <div style="font-size:13.5px;line-height:1.75;color:var(--gray-800);margin-bottom:10px">
+        이 앱은 개인 개발자가 만든 도구로 현재 <b>Google 테스트 단계</b>입니다. Google 정책상 민감 권한(구글 폼·드라이브)을 쓰는 앱은 <b>개발자가 승인한 사용자만</b> 로그인할 수 있습니다. 따라서 <b>처음 사용하시는 분은 아래 이메일로 사용 요청</b>을 보내주셔야 합니다.
+      </div>
+      <div style="background:var(--blue-light);border-radius:var(--radius);padding:12px 14px;text-align:center;margin-bottom:10px">
+        <div style="font-size:12px;color:var(--gray-600);margin-bottom:4px">📩 사용 요청 이메일</div>
+        <div style="font-size:14px;font-weight:600;color:var(--blue)">
+          <a href="mailto:jerry5026@gmail.com?subject=%5B%ED%95%99%EC%83%9D%20%EA%B8%B0%EC%B4%88%EC%A1%B0%EC%82%AC%20%EB%8F%84%EC%9A%B0%EB%AF%B8%5D%20%EC%82%AC%EC%9A%A9%20%EC%9A%94%EC%B2%AD&amp;body=%EC%95%88%EB%85%95%ED%95%98%EC%84%B8%EC%9A%94%2C%0A%0A%ED%95%99%EC%83%9D%20%EA%B8%B0%EC%B4%88%EC%A1%B0%EC%82%AC%20%EB%8F%84%EC%9A%B0%EB%AF%B8%20%EC%82%AC%EC%9A%A9%EC%9D%84%20%EC%9A%94%EC%B2%AD%EB%93%9C%EB%A6%BD%EB%8B%88%EB%8B%A4.%0A%0A%E2%80%A2%20%EC%86%8C%EC%86%8D%20%ED%95%99%EA%B5%90%3A%20%0A%E2%80%A2%20%EC%84%B1%ED%95%A8%3A%20%0A%E2%80%A2%20%EB%A1%9C%EA%B7%B8%EC%9D%B8%ED%95%A0%20Gmail%20%EC%A3%BC%EC%86%8C%3A%20%0A%0A%EA%B0%90%EC%82%AC%ED%95%A9%EB%8B%88%EB%8B%A4." style="color:var(--blue);text-decoration:none">jerry5026@gmail.com</a>
+        </div>
+      </div>
+      <div style="font-size:13px;line-height:1.75;color:var(--gray-800)">
+        <b>메일에 함께 보내주실 정보</b>
+        <ul style="padding-left:20px;margin-top:4px">
+          <li>소속 학교</li>
+          <li>성함</li>
+          <li>로그인에 사용하실 <b>Gmail 주소</b></li>
+        </ul>
+      </div>
+      <div class="help-tip">🔒 <b>안심하셔도 됩니다</b> — 이 앱은 선생님의 Google 폼과 드라이브(앱이 만든 파일)에만 접근합니다. 개인 메일·문서·연락처 등에는 일절 접근하지 않으며, 서버가 없어 데이터가 외부로 전송되지도 않습니다. 모든 자료는 선생님의 브라우저와 본인 Google 계정 안에서만 다뤄집니다.</div>
+      <div class="help-tip" style="background:#f3e8ff;border-left-color:#7c3aed;margin-top:6px">🏫 <b>학교 Workspace 계정을 쓰신다면</b> (예: <code>@xxx.sen.go.kr</code>, <code>@xxx.hs.kr</code>) 별도 승인 없이 바로 쓸 수 있는 방안이 준비될 수 있으니 메일에 <b>"학교 Workspace 계정"</b>이라고 함께 알려주세요.</div>
+    </div>
+
+    <div class="help-section">
+      <h3>🚀 2. 로그인 후 첫 실행</h3>
       <ol>
-        <li><b>Google 계정으로 로그인</b> — 메인 화면에서 Google 계정 로그인 버튼을 클릭합니다.</li>
-        <li>처음 사용한다면 Google Cloud Console에서 <b>Google Forms API</b>와 <b>Google Drive API</b>를 활성화해야 합니다 (로그인 화면 하단의 ⚙️ 설정 안내 참고).</li>
+        <li>승인이 완료되면 로그인 화면의 <b>Google 계정으로 시작하기</b> 버튼을 눌러 로그인합니다.</li>
+        <li>처음에는 질문 관리 탭에 <b>기본 질문 39개</b>가 미리 채워져 있습니다. 필요에 맞게 편집하거나 그대로 써도 됩니다.</li>
+        <li>AI 상담 질문 기능을 쓰려면 <b>⚙️ AI 설정</b> 탭에서 OpenAI/Claude/Gemini 중 하나를 골라 <b>API 키</b>를 입력합니다. (무료로 시작하시려면 <b>Gemini 3 Flash / Flash Lite</b> 추천)</li>
       </ol>
     </div>
 
     <div class="help-section">
-      <h3>📝 2. 질문 관리 탭</h3>
+      <h3>📝 3. 질문 관리 탭</h3>
       <ol>
         <li><b>기본 질문 39개</b>가 로드되어 있습니다 — 고등학생 학기 초 기초조사에 최적화된 구성입니다.</li>
         <li><b>+ 질문 추가</b> — 새 질문을 직접 추가합니다. 서술형/단일선택/복수선택 지원.</li>
@@ -558,7 +586,7 @@
     </div>
 
     <div class="help-section">
-      <h3>📋 3. 폼 생성 탭</h3>
+      <h3>📋 4. 폼 생성 탭</h3>
       <ol>
         <li><b>📋 Google Form 만들기</b> 버튼을 누르면 현재 질문 목록으로 구글 폼이 자동 생성됩니다.</li>
         <li><b>학생 배포 링크</b>를 복사해 학생들에게 공유하세요.</li>
@@ -567,7 +595,7 @@
     </div>
 
     <div class="help-section">
-      <h3>👤 4. 학생 응답 탭</h3>
+      <h3>👤 5. 학생 응답 탭</h3>
       <ol>
         <li><b>🔄 응답 새로고침</b>으로 학생 응답을 불러옵니다.</li>
         <li>학생을 선택하면 카테고리별(진로·가족·학습·성격 등)로 정리된 응답을 확인합니다.</li>
@@ -582,7 +610,7 @@
     </div>
 
     <div class="help-section">
-      <h3>🤖 5. AI 상담 질문 탭</h3>
+      <h3>🤖 6. AI 상담 질문 탭</h3>
       <ol>
         <li>먼저 <b>⚙️ AI 설정</b> 탭에서 사용할 AI(OpenAI/Claude/Gemini) 모델과 API 키를 설정합니다.</li>
         <li><b>Gemini 3 Flash / Flash Lite</b>는 무료(1,500회/일)로 사용할 수 있어 입문자에게 권장합니다.</li>
@@ -609,7 +637,7 @@
     </div>
 
     <div class="help-section">
-      <h3>⚙️ 6. AI 설정 탭</h3>
+      <h3>⚙️ 7. AI 설정 탭</h3>
       <ol>
         <li><b>제공사 선택</b> → <b>모델 선택</b> → <b>API 키 입력</b> 3단계 순서로 진행합니다.</li>
         <li>API 키 입력 후 <b>유효성 확인</b>을 누르거나, 붙여넣기 하면 자동으로 검증됩니다.</li>
