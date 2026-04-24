@@ -328,11 +328,19 @@
       <div class="card">
         <div class="card-title">🤖 AI 상담 질문 생성</div>
 
-        <!-- 현재 AI 모델 표시 -->
-        <div id="ai-model-status" style="display:flex;align-items:center;gap:10px;padding:12px 16px;background:var(--gray-50);border-radius:var(--radius);margin-bottom:16px;flex-wrap:wrap">
-          <span style="font-size:13px;color:var(--gray-600)">현재 모델:</span>
-          <span id="ai-current-chip" class="model-chip">미설정</span>
-          <button class="btn btn-outline btn-sm" style="margin-left:auto" onclick="switchTab('settings',document.querySelector('[data-tab=settings]'))">⚙️ 모델 변경</button>
+        <!-- 현재 AI 모델 선택 드롭다운 -->
+        <div id="ai-model-status" style="margin-bottom:16px">
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
+            <label for="ai-model-select" style="font-size:13px;font-weight:500;color:var(--gray-700);white-space:nowrap">🤖 모델 선택</label>
+            <select id="ai-model-select" onchange="selectModelFromAITab(this.value)"
+              style="flex:1;min-width:200px;padding:9px 12px;border:2px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none;cursor:pointer;background:#fff;transition:border-color .2s"
+              onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
+            </select>
+            <button class="btn btn-outline btn-sm" style="white-space:nowrap" onclick="switchTab('settings',document.querySelector('[data-tab=settings]'))">⚙️ API 키 설정</button>
+          </div>
+          <div id="ai-no-key-inline" style="display:none;margin-top:8px;font-size:12px;color:var(--red)">
+            ⚠️ API 키가 설정된 모델이 없습니다. <b>API 키 설정</b> 버튼을 눌러 키를 입력하세요.
+          </div>
         </div>
 
         <div id="ai-no-key" class="warning-box" style="display:none">
@@ -804,6 +812,15 @@ function selectModel(id) {
   renderSummary();
   updateAIPanel();
 }
+function selectModelFromAITab(value) {
+  if(!value||value.indexOf(':')<0) return;
+  const [pid,mid]=value.split(':');
+  aiProvider=pid; aiModel=mid;
+  localStorage.setItem('ai_provider',aiProvider);
+  localStorage.setItem('ai_model',aiModel);
+  updateAIPanel();
+  renderSettingsTab(); // 설정 탭과 동기화
+}
 
 function renderSummary() {
   const p=PROVIDERS[aiProvider];
@@ -896,11 +913,27 @@ function updateAIPanel() {
   const hasKey=key&&p?.validateKeyFormat(key);
   const name=currentStudent?(getName(currentStudent)||'학생'):null;
 
-  // 현재 모델 칩
-  const chip=document.getElementById('ai-current-chip');
-  if(m){chip.innerHTML=`${p.icon} ${m.label} <span class="${TIER_CLASS[m.tier]}" style="margin-left:4px">${TIER_LABEL[m.tier]}</span>`;}
+  // ── 모델 드롭다운 빌드 ──
+  const sel=document.getElementById('ai-model-select');
+  if(sel){
+    let opts=''; let anyKey=false;
+    Object.entries(PROVIDERS).forEach(([pid,pv])=>{
+      const k=localStorage.getItem(pv.keyStorage)||'';
+      if(!k||!pv.validateKeyFormat(k)) return;
+      anyKey=true;
+      opts+=`<optgroup label="${pv.icon} ${pv.name}">`;
+      pv.models.forEach(mv=>{
+        const sel_=(aiProvider===pid&&aiModel===mv.id)?'selected':'';
+        opts+=`<option value="${pid}:${mv.id}" ${sel_}>${mv.label}　${TIER_LABEL[mv.tier]}</option>`;
+      });
+      opts+='</optgroup>';
+    });
+    if(!anyKey){ opts='<option value="">— API 키 설정된 모델 없음 —</option>'; }
+    sel.innerHTML=opts;
+    document.getElementById('ai-no-key-inline').style.display=anyKey?'none':'block';
+    document.getElementById('ai-no-key').style.display='none'; // 인라인 메시지로 대체
+  }
 
-  document.getElementById('ai-no-key').style.display=hasKey?'none':'block';
   document.getElementById('ai-no-student').style.display=name?'none':'block';
   document.getElementById('ai-btn').disabled=!name||!hasKey;
   document.getElementById('ai-student-name').textContent=name?`${name} 학생`:'학생 미선택';
