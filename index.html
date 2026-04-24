@@ -333,7 +333,7 @@
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
             <label for="ai-model-select" style="font-size:13px;font-weight:500;color:var(--gray-700);white-space:nowrap">🤖 모델 선택</label>
             <select id="ai-model-select" onchange="selectModelFromAITab(this.value)"
-              style="flex:1;min-width:200px;padding:9px 12px;border:2px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none;cursor:pointer;background:#fff;transition:border-color .2s"
+              style="width:260px;padding:9px 12px;border:2px solid var(--gray-200);border-radius:var(--radius);font-size:13px;outline:none;cursor:pointer;background:#fff;transition:border-color .2s"
               onfocus="this.style.borderColor='var(--blue)'" onblur="this.style.borderColor='var(--gray-200)'">
             </select>
             <button class="btn btn-outline btn-sm" style="white-space:nowrap" onclick="switchTab('settings',document.querySelector('[data-tab=settings]'))">⚙️ API 키 설정</button>
