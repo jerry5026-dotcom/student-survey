@@ -146,10 +146,298 @@
 
 ---
 
+## 🗂 코드 구조 / 파일 맵
+
+`index.html`은 약 1,950줄 단일 파일이며 다음 순서로 구성된다.
+
+| 영역 | 대략 라인 | 내용 |
+|---|---|---|
+| `<head>` | 1~233 | 메타 + 외부 CDN 2개(Google GIS, ExcelJS) + 전체 CSS |
+| **CSS 블록** | 9~232 | 디자인 토큰(`:root`), 컴포넌트별 스타일 |
+| 로그인 화면 | 236~307 | `#login-screen` — 사용 요청 안내 + 자체 배포 안내 2단 아코디언 |
+| 앱 셸 | 310~513 | 헤더·탭바·5개 탭 패널·푸터 |
+| 탭1 질문 관리 | 330~358 | 질문 테이블 + 5개 버튼(추가·기본값·다운/업로드) |
+| 탭2 폼 생성 | 360~391 | Google Form 생성 버튼 + 학생/교사 링크 |
+| 탭3 학생 응답 | 393~416 | 학생 드롭다운 + 카테고리별 응답 카드 |
+| 탭4 AI 상담 질문 | 418~472 | 모델 선택 + 학생 선택 + 4개 액션 버튼 + 결과 영역 |
+| 탭5 AI 설정 | 474~505 | 제공사 카드 + 모델 리스트 + API 키 입력 |
+| 푸터 | 509~512 | 응원 문구 + 버전·날짜 |
+| 모달 영역 | 516~657 | 질문 추가/수정 모달 + 사용법 모달 + 로딩 + 토스트 |
+| **JS 블록** | 663~1943 | 상태·인증·UI·기능 함수 |
+| 설정·상수 | 666~775 | `CLIENT_ID`, `SCOPES`, `AI_PERSONA`, `PROVIDERS`, `CAT_DEFS`, `DEFAULT_QUESTIONS` |
+| 상태·초기화 | 778~810 | 전역 변수 + `window.onload` |
+| 인증 | 813~839 | `handleLogin`, `handleTokenResponse`, `handleLogout`, `ensureToken` |
+| Google API 래퍼 | 844~853 | `apiFetch` |
+| UI 헬퍼 | 858~892 | `showApp`, `switchTab`, `toggleSetup`, `toast`, `showLoading`, `esc`, `nl2br` |
+| 질문 관리 | 897~993 | `renderQuestions`, 드래그앤드롭 5함수, `saveQuestion`, `resetToDefaults` 등 |
+| 폼 생성 | 998~1017 | `handleCreateForm`, `updateFormPanel` |
+| 응답 로드 | 1022~1067 | `loadResponses`, `populateDropdown`, `selectStudent`, `renderResponse` |
+| AI 설정 탭 | 1072~1155 | `renderSettingsTab`, `selectProvider`, `selectModel`, `renderSummary` |
+| API 키 검증 | 1160~1223 | `setKeyUI`, `onKeyInput`, `onKeyPaste`, `testApiKey` |
+| AI 결과 화면 | 1228~1297 | `updateAIPanel` |
+| AI 생성 | 1299~1389 | `generateAIQuestions`, `callOpenAI`, `callClaude`, `callGemini`, `copyAI` |
+| 에러 한글화 | 1394~1417 | `translateApiError` (10가지 패턴 매칭) |
+| 도움말 모달 | 1422~1423 | `openHelpModal`, `closeHelpModal` |
+| AI 일괄 생성 | 1428~1499 | `generateAllAI` |
+| AI 아코디언 | 1502~1547 | `renderBulkAIResults`, `toggleAIAcc`, `expandAllAIAcc` |
+| AI 삭제 | 1549~1578 | `deleteAIForStudent`, `deleteAllAI` |
+| 질문 템플릿 | 1583~1699 | `downloadQuestionTemplate`, `uploadQuestionTemplate` |
+| 엑셀 다운로드 | 1706~1942 | `downloadExcelWithAI`, `downloadExcel` (파라미터 `includeAI`) |
+
+> 💡 라인 번호는 변경 시 자연스럽게 어긋난다. 큰 작업 전엔 `Grep`으로 함수명을 찾아 정확한 위치 확인 권장.
+
+---
+
+## 💾 상태 관리
+
+### 전역 변수 (in-memory)
+
+```js
+let tokenClient, accessToken, tokenExpiry;       // OAuth
+let questions, formId, formStudentUrl, formEditUrl;  // 질문·폼
+let allResponses, currentStudent, aiMemory;      // 응답·AI 결과
+let editingIdx, dragSrcIdx;                      // 임시 UI 상태
+let aiProvider, aiModel, keyTestTimer;           // AI 설정
+let _responsesAutoLoaded;                        // 응답 자동 로드 가드
+```
+
+### `localStorage` 키 (영속)
+
+| 키 | 값 | 용도 |
+|---|---|---|
+| `questions` | JSON 배열 | 현재 질문 목록 (편집 시마다 저장) |
+| `my_default_questions` | JSON 배열 | 사용자가 "내 기본값으로 저장"한 목록 |
+| `formId` | string | 생성된 Google Form ID |
+| `formStudentUrl` | string | 학생 배포 링크 |
+| `formEditUrl` | string | 교사 수정 링크 |
+| `aiMemory` | JSON `{학생명: 질문텍스트}` | 학생별 AI 상담 질문 결과 |
+| `ai_provider` | `'openai'`/`'claude'`/`'gemini'` | 선택된 AI 제공사 |
+| `ai_model` | string | 선택된 모델 ID |
+| `openai_key` | string | OpenAI API 키 (sk-...) |
+| `anthropic_key` | string | Anthropic API 키 (sk-ant-...) |
+| `gemini_key` | string | Gemini API 키 (AIza...) |
+
+### `sessionStorage` 키 (탭 단위)
+
+| 키 | 값 | 용도 |
+|---|---|---|
+| `access_token` | string | 현재 OAuth 액세스 토큰 |
+| `token_expiry` | number(ms) | 토큰 만료 시각 |
+| `user_email` | string | 로그인된 사용자 이메일 |
+
+> **주의**: 새 기능 추가 시 새 localStorage 키를 도입하면 이 표에도 추가.
+
+---
+
+## 🔌 외부 의존성
+
+### CDN 스크립트 (둘 다 `<head>`에서 로드)
+
+| 라이브러리 | 버전 | URL | 용도 |
+|---|---|---|---|
+| Google Identity Services | 최신 | `https://accounts.google.com/gsi/client` | OAuth 로그인 |
+| ExcelJS | 4.4.0 | `https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js` | 엑셀 다운로드/업로드 |
+
+### Google API (스코프)
+
+```
+https://www.googleapis.com/auth/forms.body    — 폼 생성·수정 (민감 스코프)
+https://www.googleapis.com/auth/drive.file    — 앱이 만든 파일 접근 (민감 스코프)
+openid, email                                 — 사용자 정보
+```
+
+### AI 제공사 엔드포인트
+
+| 제공사 | 엔드포인트 | 인증 헤더 |
+|---|---|---|
+| OpenAI | `POST https://api.openai.com/v1/chat/completions` | `Authorization: Bearer {key}` |
+| Claude | `POST https://api.anthropic.com/v1/messages` | `x-api-key`, `anthropic-version`, `anthropic-dangerous-direct-browser-access: true` |
+| Gemini | `POST https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={key}` | URL 쿼리 |
+
+모두 `max_tokens / maxOutputTokens: 8000` 으로 통일 (한국어 30문항 여유).
+
+---
+
+## 🤖 AI 제공사 추가 절차
+
+새 제공사를 추가하려면:
+
+1. **`PROVIDERS` 객체에 항목 추가** (line ~678):
+   ```js
+   newProvider: {
+     name, icon, sub, keyStorage, keyPlaceholder, keyHint,
+     validateKeyFormat: k => /* 형식 검증 */,
+     models: [{id, label, tier, desc}, ...]
+   }
+   ```
+2. **`callNewProvider(prompt, model, key)` 함수 추가** (callOpenAI 등 옆에)
+3. **`generateAIQuestions` / `generateAllAI`의 if-else 체인에 분기 추가**
+4. **`testApiKey`의 if-else 체인에 키 검증용 ping 추가**
+5. **버전: 마이너 (`1.x.0 → 1.(x+1).0`)**
+
+---
+
+## 📊 엑셀 출력 구조
+
+`downloadExcel(includeAI)` 가 생성하는 워크북:
+
+### 시트1: 학생조회
+
+```
+A          B (수식)            C  D (AI 포함 시만)
+A1:B1 [📋 학생 기초조사 응답 조회]      ─
+A3   B3 [학생 이름 입력칸]              ─
+A4   B4 [10px 빈 행]                    ─
+A5   B5 [카테고리 헤더]                  D5 [🤖 AI 상담 질문 타이틀]
+A6   B6 [질문]  [INDEX/MATCH 응답]      D6 [AI 질문1 수식]
+...                                     D7 [AI 질문2 수식]
+                                        ...
+```
+
+- B열 수식: `IFERROR(INDEX('전체응답'!{col}:{col}, MATCH($B$3, '전체응답'!{nameCol}:{nameCol}, 0)), "")`
+- D열 수식 (AI): `IF($B$3="", "", IFERROR(INDEX(...), ""))` — B3 비면 D열도 비움
+- 카테고리: `CAT_DEFS` 정규식으로 자동 분류, 색상도 카테고리별 다름
+- D열 너비: **120 고정**, 행 높이는 글자 길이 / 120 → 줄 수 × 22
+
+### 시트2: 전체응답
+
+```
+A           B           C           ...   AI_Q1   AI_Q2   ...
+제출 시간   이름        학번        ...   (학생별 AI 질문)
+[ts]        김철수      1234       ...   1.질문   2.질문  ...
+[ts]        이영희      5678       ...   1.질문   2.질문  ...
+```
+
+- 시간순 정렬 (`__submitTime__` ASC)
+- 행 높이는 셀 내용 길이 기반 자동 계산
+- AI 컬럼은 `includeAI=true` 일 때만 추가
+
+---
+
+## 🧭 자주 하는 작업 가이드
+
+### 새 기본 질문 추가/수정
+
+`DEFAULT_QUESTIONS` 배열(line ~735) 수정. 형식:
+```js
+{ title: '질문', options: [], multi: false, optional: false }
+```
+- `options` 비우면 서술형
+- `multi: true` 는 체크박스(복수선택), 객관식인 경우만 의미 있음
+- `optional: true` 는 응답 선택 사항
+
+→ 버전: 패치 (작은 텍스트 변경) 또는 마이너 (질문 다수 추가)
+
+### 새 카테고리 추가
+
+`CAT_DEFS` 배열(line ~726)에 추가:
+```js
+{ key: '🆕 새카테고리', rx: /(키워드1|키워드2)/ }
+```
+- `📋 기타`(catch-all) 직전에 삽입해야 함
+- 엑셀 색상도 `downloadExcel` 내 `catColors`에 추가
+
+→ 버전: 마이너
+
+### 새 탭 추가
+
+1. `<nav class="app-tabs">` 에 `<button class="tab-btn" data-tab="newtab" onclick="switchTab('newtab',this)">` 추가
+2. `<main>` 안에 `<div id="tab-newtab" class="tab-panel">...</div>` 추가
+3. `switchTab(id)`에 필요시 분기 로직
+4. 탭별 렌더 함수 추가
+
+→ 버전: 마이너
+
+### 새 모달 추가
+
+`<div id="myModal" class="modal-overlay" style="display:none">...</div>` 형식. 표시·숨김 함수 짧게 작성:
+```js
+function openMyModal(){ document.getElementById('myModal').style.display='flex'; }
+function closeMyModal(){ document.getElementById('myModal').style.display='none'; }
+```
+
+### 푸터 메시지 변경
+
+line ~510~511만 수정. 1행은 12px·#8a8f98, 2행은 11px·#b5bac2 유지.
+
+→ 버전: 패치
+
+---
+
+## 🧪 변경 후 검증 체크리스트
+
+큰 변경 후 푸시 전에 확인:
+
+- [ ] **중괄호 균형**: PowerShell `[regex]::Matches($t,'\{').Count` 와 `\}` 카운트 일치
+- [ ] **새 함수 호출 위치**: `Grep`으로 함수명 검색 → 모든 호출 지점 정상 인자
+- [ ] **localStorage 키**: 새 키 도입 시 이 문서 표에도 추가
+- [ ] **푸터 버전·날짜**: 코드 수정이면 둘 다 갱신했는지
+- [ ] **모바일 레이아웃**: `flex-wrap:wrap` 누락 없는지 (좁은 화면 깨짐 방지)
+- [ ] **에러 처리**: 새 fetch 호출엔 try/catch + `translateApiError` 통과 권장
+- [ ] **사용자 입력 표시**: `innerHTML` 사용처는 `esc()` 통과 확인
+- [ ] **사용법 모달**: 새 기능 추가 시 도움말 섹션도 갱신
+
+---
+
+## 🚧 알려진 한계 / 개선 백로그
+
+### 한계 (구조적)
+
+- **100명 사용자 한도** — Google OAuth Testing 모드 정책. 검증 통과 전까지 풀리지 않음
+- **7일 토큰 만료** — Testing 모드 한정. 검증 후 무기한
+- **토큰 만료 시 매번 로그인 클릭 필요** — 자동 silent reauth 미구현 (구현 가능, 보류 중)
+- **단일 폼만 관리** — `formId` 한 개만 저장. 학년·반 별 다중 폼 미지원
+
+### 개선 후보
+
+- [ ] 자동 silent reauth (`prompt: ''` 사용) — 같은 브라우저 재방문 시 자동 로그인
+- [ ] 학년·반별 다중 폼 관리 — `formId`를 배열로 확장
+- [ ] AI 질문 결과 편집 기능 — 생성된 질문 중 일부만 골라 저장
+- [ ] PDF 출력 — 상담 시 인쇄용
+- [ ] 다크 모드
+- [ ] 학생별 메모 기능 — AI 질문 옆에 상담 후 메모 입력
+- [ ] 학기 단위 데이터 보존 — 새 학기 시작 시 기존 데이터 아카이브
+- [ ] 일괄 생성 중 일시정지·재개
+
+### 이미 처리한 주요 이슈 (참고용)
+
+- ✅ 개별 생성 후 버튼 라벨 잘못 복원되던 문제 (v1.0.0 직전 수정)
+- ✅ AI 메모리 없는 학생 선택 시 stale state
+- ✅ onclick 학생명 직접 삽입 → XSS 위험 → 인덱스 전달로 변경
+- ✅ 응답 탭 자동 호출을 최초 1회로 제한
+
+---
+
+## 🔬 디버깅 팁
+
+### 사용자가 "안 돼요" 라고 할 때 먼저 묻기
+
+1. 어느 탭에서? 어떤 버튼?
+2. 토스트 메시지 (빨간색·초록색) 내용?
+3. 브라우저 콘솔 에러? (F12 → Console)
+4. 어떤 AI 모델·제공사 사용 중?
+
+### 자주 발생하는 문제
+
+| 증상 | 원인 | 해결 |
+|---|---|---|
+| 로그인 후 즉시 로그아웃 | 테스트 사용자 미등록 | Google Cloud Console → OAuth 동의 화면 → 테스트 사용자 추가 |
+| `ExcelJS undefined` 에러 | CDN 로딩 실패 | 네트워크 확인, CDN URL 변경 가능성 |
+| AI 응답이 도중에 잘림 | `max_tokens` 부족 | callOpenAI/Claude/Gemini 의 토큰 값 확인 (현재 8000) |
+| 응답 탭에서 학생이 안 보임 | 폼 응답 0건 또는 API 권한 문제 | `loadResponses` 토스트 메시지 확인 |
+| 모델 not found | Gemini 모델 ID 변경 | `PROVIDERS.gemini.models` ID 최신화 |
+
+---
+
 ## 📝 변경 로그 (선택 운영)
 
 향후 필요하면 이 파일 하단 또는 별도 `CHANGELOG.md`에 변경 내역을 누적 기록.
 
 ```
 v1.0.0 (2026.04.24.) — 최초 배포 베이스라인
+  · 기초조사 39개 질문, Google Form 자동 생성, 응답 카테고리화
+  · OpenAI·Claude·Gemini 9개 모델 지원, AI 상담 질문 개별/일괄 생성
+  · ExcelJS 기반 엑셀 다운로드 2종 (응답만 / AI 포함)
+  · 질문 엑셀 템플릿 다운/업로드, 드래그앤드롭 순서 변경
+  · 사용 요청 안내 + 사용법 모달 + 푸터
 ```
