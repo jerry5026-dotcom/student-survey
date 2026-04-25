@@ -13,7 +13,7 @@
       --green:#137333; --green-light:#f0fdf4;
       --orange:#f29900; --red:#d93025;
       --gray-50:#f8f9fa; --gray-100:#f1f3f4; --gray-200:#e8eaed;
-      --gray-400:#9aa0a6; --gray-600:#5f6368; --gray-800:#3c4043; --gray-900:#202124;
+      --gray-400:#9aa0a6; --gray-600:#5f6368; --gray-700:#4a4f55; --gray-800:#3c4043; --gray-900:#202124;
       --shadow:0 1px 3px rgba(0,0,0,.12),0 1px 2px rgba(0,0,0,.08);
       --radius:8px; --font:'Segoe UI','Noto Sans KR',system-ui,sans-serif;
     }
@@ -73,7 +73,7 @@
     /* QUESTIONS TABLE */
     .questions-table { width:100%; border-collapse:collapse; font-size:13px; table-layout:fixed; }
     .questions-table th { background:var(--blue); color:#fff; padding:11px 12px; text-align:left; font-weight:500; font-size:12px; white-space:nowrap; }
-    .questions-table th:first-child { border-radius:6px 0 0 0; width:44px; }
+    .questions-table th:first-child { border-radius:6px 0 0 0; width:60px; }
     .questions-table th:last-child { border-radius:0 6px 0 0; width:152px; }
     .questions-table th:nth-child(3) { width:190px; }
     .questions-table th:nth-child(4) { width:100px; }
@@ -196,7 +196,6 @@
     .questions-table tr.dragging { opacity:.4; background:var(--blue-light) !important; }
     .questions-table tr.drag-over-top td { border-top:3px solid var(--blue) !important; }
     .questions-table tr.drag-over-bot td { border-bottom:3px solid var(--blue) !important; }
-    .questions-table th:first-child { width:60px; }
     textarea { width:100%; padding:10px 14px; border:1px solid var(--gray-200); border-radius:var(--radius); font-size:13px; resize:vertical; outline:none; font-family:var(--font); line-height:1.5; }
     textarea:focus { border-color:var(--blue); box-shadow:0 0 0 3px rgba(26,115,232,.15); }
     .form-label { display:block; font-size:13px; font-weight:500; color:var(--gray-800); margin-bottom:6px; }
@@ -465,7 +464,7 @@
           <div class="ai-placeholder">
             <div style="font-size:48px;margin-bottom:12px">🤖</div>
             <div style="color:var(--gray-600);font-size:15px">AI 상담 질문이 여기에 표시됩니다</div>
-            <div class="text-muted mt-8">학생을 선택하고 "AI 질문 생성" 버튼을 클릭하세요</div>
+            <div class="text-muted mt-8">학생을 선택하고 "선택 학생 생성" 버튼을 클릭하세요</div>
           </div>
         </div>
       </div>
@@ -861,12 +860,18 @@ function showApp(email) {
   document.getElementById('user-email').textContent=email;
   renderQuestions(); updateFormPanel(); renderSettingsTab(); updateAIPanel(); updateDefaultSourceLabel();
 }
+let _responsesAutoLoaded=false;
 function switchTab(id,btn) {
   document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('tab-'+id).classList.add('active');
   if (btn) btn.classList.add('active');
-  if (id==='responses') loadResponses();
+  // 응답 탭: 폼이 있고, 아직 한 번도 자동 로드 안 했고, 응답이 비어있을 때만 자동 로드
+  // (탭 전환마다 Google API를 호출하면 quota 낭비 + 로딩 스피너 깜빡임)
+  if (id==='responses' && formId && !_responsesAutoLoaded && !allResponses.length) {
+    _responsesAutoLoaded=true;
+    loadResponses();
+  }
   if (id==='ai') updateAIPanel();
   if (id==='settings') renderSettingsTab();
 }
@@ -962,7 +967,6 @@ function openAddModal(){editingIdx=-1;document.getElementById('q-modal-title').t
 function openEditModal(i){editingIdx=i;const q=questions[i];document.getElementById('q-modal-title').textContent='질문 수정';document.getElementById('q-title').value=q.title;document.getElementById('q-options').value=q.options.join('\n');document.getElementById('q-multi').checked=q.multi;document.getElementById('q-optional').checked=q.optional;document.getElementById('q-modal').style.display='flex';}
 function saveQuestion(){const title=document.getElementById('q-title').value.trim();if(!title){toast('질문 내용을 입력해주세요.','error');return;}const options=document.getElementById('q-options').value.split('\n').map(s=>s.trim()).filter(Boolean);const multi=document.getElementById('q-multi').checked;const optional=document.getElementById('q-optional').checked;const q={title,options,multi,optional};if(editingIdx===-1)questions.push(q);else questions[editingIdx]=q;saveQs();renderQuestions();closeModal();toast(editingIdx===-1?'질문이 추가되었습니다.':'질문이 수정되었습니다.','success');}
 function deleteQ(i){if(!confirm(`"${questions[i].title}" 질문을 삭제하시겠습니까?`))return;questions.splice(i,1);saveQs();renderQuestions();toast('삭제되었습니다.');}
-function moveQ(i,dir){const j=i+dir;if(j<0||j>=questions.length)return;[questions[i],questions[j]]=[questions[j],questions[i]];saveQs();renderQuestions();}
 function resetToDefaults(){
   const myDefault=localStorage.getItem('my_default_questions');
   const label=myDefault?'내 기본값':'공장 기본값';
@@ -987,7 +991,7 @@ function updateDefaultSourceLabel(){
     el.textContent=`⭐ 현재 기본값: 내가 저장한 기본값 (${parsed.length}개 질문)`;
     el.style.color='var(--orange)';
   } else {
-    el.textContent='🔧 현재 기본값: 공장 초기값 (40개 질문) — ⭐ 내 기본값으로 저장 버튼으로 직접 지정할 수 있습니다.';
+    el.textContent=`🔧 현재 기본값: 공장 초기값 (${DEFAULT_QUESTIONS.length}개 질문) — ⭐ 내 기본값으로 저장 버튼으로 직접 지정할 수 있습니다.`;
     el.style.color='';
   }
 }
@@ -1273,8 +1277,12 @@ function updateAIPanel() {
   if(bulkBtn) bulkBtn.disabled=!hasKey||!allResponses.length;
   document.getElementById('ai-student-name').textContent=name?`${name} 학생`:'학생 미선택';
 
-  if(name&&aiMemory[name]){
-    document.getElementById('ai-result-area').innerHTML=`
+  // 결과 영역: 선택 학생 기준으로 갱신
+  const area=document.getElementById('ai-result-area');
+  // 아코디언이 표시 중이면 학생 선택만으로 화면을 덮어쓰지 않음 (일괄 보기 유지)
+  const accordionVisible=area && area.querySelector('.ai-bulk-toolbar');
+  if(name && aiMemory[name]){
+    area.innerHTML=`
       <div class="ai-result">
         <div class="ai-result-name">👤 ${esc(name)} 학생</div>
         ${esc(aiMemory[name])}
@@ -1282,6 +1290,14 @@ function updateAIPanel() {
       <div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">
         <span class="text-muted" style="align-self:center">이전에 생성된 질문</span>
         <button class="btn btn-outline btn-sm" onclick="copyAI()">📋 복사</button>
+      </div>`;
+  } else if(name && !accordionVisible){
+    // 학생을 선택했지만 AI 질문이 없는 경우 — 이전 학생 결과 잔상 방지용 안내 화면
+    area.innerHTML=`
+      <div class="ai-placeholder">
+        <div style="font-size:48px;margin-bottom:12px">🤖</div>
+        <div style="color:var(--gray-600);font-size:15px">${esc(name)} 학생은 아직 AI 상담 질문이 생성되지 않았습니다</div>
+        <div class="text-muted mt-8">"선택 학생 생성" 버튼을 클릭해 만들어보세요</div>
       </div>`;
   }
 
@@ -1345,7 +1361,7 @@ async function generateAIQuestions() {
     document.getElementById('ai-result-area').innerHTML=`<div style="color:var(--red);padding:20px;background:#fff5f5;border-radius:var(--radius);border:1px solid #fccaca;white-space:pre-line;line-height:1.8">❌ <b>AI 질문 생성 실패</b>\n\n${esc(krMsg)}</div>`;
     toast('AI 생성 실패 — 상세 내용을 확인해주세요', 'error');
   } finally {
-    btn.disabled=false; btn.innerHTML='✨ AI 질문 생성';
+    btn.disabled=false; btn.innerHTML='✨ 선택 학생 생성';
   }
 }
 
@@ -1521,7 +1537,7 @@ function renderBulkAIResults(){
             <span class="acc-arrow">▼</span>
           </span>
         </div>
-        <div class="ai-acc-body ${hasTxt?'':'empty'}">${hasTxt?`<div class="ai-acc-text">${esc(txt)}</div><div class="ai-acc-footer"><button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteAIForStudent('${esc(nm).replace(/'/g,"&#39;")}',${i})">🗑️ 이 학생 질문 삭제</button></div>`:'이 학생은 AI 질문이 생성되지 않았습니다.'}</div>
+        <div class="ai-acc-body ${hasTxt?'':'empty'}">${hasTxt?`<div class="ai-acc-text">${esc(txt)}</div><div class="ai-acc-footer"><button class="btn btn-outline btn-sm" style="color:var(--red)" onclick="deleteAIForStudent(${i})">🗑️ 이 학생 질문 삭제</button></div>`:'이 학생은 AI 질문이 생성되지 않았습니다.'}</div>
       </div>`;
   }).join('');
 
@@ -1547,7 +1563,10 @@ function expandAllAIAcc(expand){
 }
 
 // ── AI 질문 삭제 ──
-function deleteAIForStudent(name,idx){
+function deleteAIForStudent(idx){
+  const r=allResponses[idx];
+  if(!r){ toast('학생 정보를 찾을 수 없습니다.','error'); return; }
+  const name=getName(r)||`학생 ${idx+1}`;
   if(!aiMemory[name]){ toast('이미 삭제되었습니다.','error'); return; }
   if(!confirm(`"${name}" 학생의 AI 상담 질문을 삭제하시겠습니까?\n\n※ 삭제 후 "전체 학생 일괄 생성"을 누르면 이 학생은 다시 대상이 됩니다.`)) return;
   delete aiMemory[name];
