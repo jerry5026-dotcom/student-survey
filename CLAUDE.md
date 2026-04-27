@@ -216,6 +216,7 @@ let _responsesAutoLoaded;                        // 응답 자동 로드 가드
 | `openai_key` | string | OpenAI API 키 (sk-...) |
 | `anthropic_key` | string | Anthropic API 키 (sk-ant-...) |
 | `gemini_key` | string | Gemini API 키 (AIza...) |
+| `remembered_email` | string | 자동 로그인 대상 이메일 (silent reauth 트리거) |
 
 ### `sessionStorage` 키 (탭 단위)
 
@@ -385,12 +386,10 @@ line ~510~511만 수정. 1행은 12px·#8a8f98, 2행은 11px·#b5bac2 유지.
 
 - **100명 사용자 한도** — Google OAuth Testing 모드 정책. 검증 통과 전까지 풀리지 않음
 - **7일 토큰 만료** — Testing 모드 한정. 검증 후 무기한
-- **토큰 만료 시 매번 로그인 클릭 필요** — 자동 silent reauth 미구현 (구현 가능, 보류 중)
 - **단일 폼만 관리** — `formId` 한 개만 저장. 학년·반 별 다중 폼 미지원
 
 ### 개선 후보
 
-- [ ] 자동 silent reauth (`prompt: ''` 사용) — 같은 브라우저 재방문 시 자동 로그인
 - [ ] 학년·반별 다중 폼 관리 — `formId`를 배열로 확장
 - [ ] AI 질문 결과 편집 기능 — 생성된 질문 중 일부만 골라 저장
 - [ ] PDF 출력 — 상담 시 인쇄용
@@ -405,6 +404,8 @@ line ~510~511만 수정. 1행은 12px·#8a8f98, 2행은 11px·#b5bac2 유지.
 - ✅ AI 메모리 없는 학생 선택 시 stale state
 - ✅ onclick 학생명 직접 삽입 → XSS 위험 → 인덱스 전달로 변경
 - ✅ 응답 탭 자동 호출을 최초 1회로 제한
+- ✅ 모바일·태블릿 반응형 (v1.2.0)
+- ✅ 자동 silent reauth — localStorage `remembered_email` + `prompt:''` 조합 (v1.3.0)
 
 ---
 
